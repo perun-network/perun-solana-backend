@@ -1,10 +1,15 @@
 package funder
 
 import (
+	"context"
+	"errors"
+	"log"
 	"time"
 
 	"github.com/gagliardetto/solana-go"
-	"perun.network/perun-stellar-backend/client"
+	"perun.network/perun-solana-backend/client"
+
+	pchannel "perun.network/go-perun/channel"
 )
 
 const (
@@ -52,4 +57,36 @@ func (f *Funder) GetPerunAddr() solana.PublicKey {
 // GetAssetAddrs returns the asset addresses of the funder.
 func (f *Funder) GetAssetAddrs() []solana.PublicKey {
 	return f.assetAddrs
+}
+
+// Fund first calls open if the channel is not opened and then funds the channel.
+func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
+	log.Println("Fund called")
+
+	if req.Idx != 0 && req.Idx != 1 {
+		return errors.New("req.Idx must be 0 or 1")
+	}
+
+	if req.Idx == pchannel.Index(0) {
+		err := f.openChannel(ctx, req)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *Funder) openChannel(ctx context.Context, req pchannel.FundingReq) error {
+	err := f.cb.Open(ctx, f.perunAddr, req.Params, req.State)
+	if err != nil {
+		return errors.Join(errors.New("error while opening channel in party A"), err)
+	}
+	channelInfo, err := f.cb.GetChannelInfo(ctx, f.perunAddr, req.State.ID)
+	if err != nil {
+		log.Println("Error while getting channel info: ", err)
+		return err
+	}
+	log.Println("channel opened: ", channelInfo)
+	return nil
 }

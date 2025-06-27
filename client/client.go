@@ -3,10 +3,12 @@ package client
 import (
 	"context"
 
+	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
+	"perun.network/perun-solana-backend/encoding"
 )
 
 // ErrCouldNotDecodeTx is returned when the tx could not be decoded.
@@ -21,6 +23,7 @@ type SolanaClient interface {
 	Dispute(ctx context.Context) error
 	Close(ctx context.Context) error
 	ForceClose(ctx context.Context) error
+	GetChannelInfo(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) (encoding.Channel, error)
 }
 
 var _ SolanaClient = (*ContractBackend)(nil)
@@ -70,4 +73,31 @@ func (cb *ContractBackend) Close(ctx context.Context) error {
 
 func (cb *ContractBackend) ForceClose(ctx context.Context) error {
 	return nil //TODO
+}
+
+func (cb *ContractBackend) GetChannelInfo(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) (encoding.Channel, error) {
+	channelPDA, err := ChannelPDA(chanID, perunAddr)
+	if err != nil {
+		return encoding.Channel{}, errors.Wrap(err, "GetChannelInfo: could not get channel PDA")
+	}
+	rpcClient := cb.signer.sender.GetRPCClient()
+	accountInfo, err := rpcClient.GetAccountInfoWithOpts(
+		ctx,
+		channelPDA,
+		&rpc.GetAccountInfoOpts{
+			Commitment: defaultCommitment,
+		},
+	)
+	if err != nil {
+		return encoding.Channel{}, errors.Wrap(err, "GetChannelInfo: could not get account info")
+	}
+	if accountInfo == nil {
+		return encoding.Channel{}, errors.New("GetChannelInfo: account info is nil")
+	}
+	borshDec := bin.NewBorshDecoder(accountInfo.Value.Data.GetBinary())
+	var channel encoding.Channel
+	if err := borshDec.Decode(&channel); err != nil {
+		return encoding.Channel{}, errors.Wrap(ErrCouldNotDecodeTx, "GetChannelInfo: could not decode channel data")
+	}
+	return channel, nil
 }

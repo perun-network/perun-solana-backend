@@ -1,16 +1,34 @@
 package encoding
 
 import (
-	"errors"
 	"math/big"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/pkg/errors"
 	"perun.network/go-perun/channel"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/perun-solana-backend/wallet"
 )
 
 const solanaBackendID = 6
+
+// Control is a struct that represents the control state of a channel.
+type Control struct {
+	FundedA    bool
+	FundedB    bool
+	Closed     bool
+	WithdrawnA bool
+	WithdrawnB bool
+	Disputed   bool
+	Timestamp  uint64
+}
+
+// Channel represents a channel on the solana block-chain.
+type Channel struct {
+	Params  Params
+	State   ChannelState
+	Control Control
+}
 
 // Participant represents a participant in a Perun channel on Solana.
 type Participant struct {
