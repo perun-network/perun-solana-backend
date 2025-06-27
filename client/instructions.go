@@ -3,9 +3,9 @@ package client
 import (
 	"github.com/gagliardetto/solana-go"
 	system "github.com/gagliardetto/solana-go/programs/system"
+	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
-	"perun.network/perun-solana-backend/encoding"
 )
 
 // ChannelPDA computes the Program Derived Address (PDA) for a Perun channel on Solana.

@@ -4,10 +4,10 @@ import (
 	"math/big"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/perun-network/perun-solana-backend/wallet"
 	"github.com/pkg/errors"
 	"perun.network/go-perun/channel"
 	pchannel "perun.network/go-perun/channel"
-	"perun.network/perun-solana-backend/wallet"
 )
 
 const solanaBackendID = 6

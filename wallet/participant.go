@@ -7,8 +7,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/gagliardetto/solana-go"
+	"github.com/perun-network/perun-solana-backend/channel"
 	"perun.network/go-perun/wallet"
-	"perun.network/perun-solana-backend/channel"
 )
 
 // Participant is the backend's version of the on-chain participant in the Perun smart contract on Solana.

@@ -6,9 +6,9 @@ import (
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
-	"perun.network/perun-solana-backend/encoding"
 )
 
 // ErrCouldNotDecodeTx is returned when the tx could not be decoded.

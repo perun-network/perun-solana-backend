@@ -6,11 +6,11 @@ import (
 	"strconv"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/perun-network/perun-solana-backend/channel"
 	"github.com/pkg/errors"
 
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/channel/multi"
-	"perun.network/perun-solana-backend/channel"
 )
 
 // CrossAsset represents an on-chain asset on Solana.

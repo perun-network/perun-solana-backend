@@ -10,8 +10,8 @@ import (
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/gagliardetto/solana-go/rpc/ws"
-	"perun.network/perun-solana-backend/channel"
-	"perun.network/perun-solana-backend/wallet"
+	"github.com/perun-network/perun-solana-backend/channel"
+	"github.com/perun-network/perun-solana-backend/wallet"
 )
 
 const (

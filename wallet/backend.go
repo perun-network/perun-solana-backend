@@ -6,9 +6,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/perun-network/perun-solana-backend/channel"
 	"perun.network/go-perun/wallet"
 	"perun.network/go-perun/wire/perunio"
-	"perun.network/perun-solana-backend/channel"
 )
 
 // SignatureLength is the length of a signature in bytes.

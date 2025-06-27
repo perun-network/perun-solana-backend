@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gagliardetto/solana-go"
-	"perun.network/perun-solana-backend/client"
+	"github.com/perun-network/perun-solana-backend/client"
 
 	pchannel "perun.network/go-perun/channel"
 )
