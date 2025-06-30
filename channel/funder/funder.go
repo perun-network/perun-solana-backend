@@ -31,21 +31,13 @@ func NewFunder(
 	cb *client.ContractBackend,
 	perunAddr solana.PublicKey,
 	assetAddrs []solana.PublicKey,
-	maxIters int,
-	pollingInterval time.Duration,
 ) *Funder {
-	if maxIters <= 0 {
-		maxIters = MaxIterationsUntilAbort
-	}
-	if pollingInterval <= 0 {
-		pollingInterval = DefaultPollingInterval
-	}
 	return &Funder{
 		cb:              cb,
 		perunAddr:       perunAddr,
 		assetAddrs:      assetAddrs,
-		maxIters:        maxIters,
-		pollingInterval: pollingInterval,
+		maxIters:        MaxIterationsUntilAbort,
+		pollingInterval: DefaultPollingInterval,
 	}
 }
 
@@ -82,6 +74,8 @@ func (f *Funder) openChannel(ctx context.Context, req pchannel.FundingReq) error
 	if err != nil {
 		return errors.Join(errors.New("error while opening channel in party A"), err)
 	}
+
+	time.Sleep(f.pollingInterval) // Wait for the channel to be opened
 	channelInfo, err := f.cb.GetChannelInfo(ctx, f.perunAddr, req.State.ID)
 	if err != nil {
 		log.Println("Error while getting channel info: ", err)

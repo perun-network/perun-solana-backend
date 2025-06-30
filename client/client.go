@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"log"
 
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
@@ -80,12 +81,13 @@ func (cb *ContractBackend) GetChannelInfo(ctx context.Context, perunAddr solana.
 	if err != nil {
 		return encoding.Channel{}, errors.Wrap(err, "GetChannelInfo: could not get channel PDA")
 	}
+	log.Println("GetChannelInfo: channel PDA:", channelPDA)
 	rpcClient := cb.signer.sender.GetRPCClient()
 	accountInfo, err := rpcClient.GetAccountInfoWithOpts(
 		ctx,
 		channelPDA,
 		&rpc.GetAccountInfoOpts{
-			Commitment: defaultCommitment,
+			Commitment: rpc.CommitmentConfirmed,
 		},
 	)
 	if err != nil {
