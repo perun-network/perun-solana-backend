@@ -52,3 +52,28 @@ func (cb *ContractBackend) NewOpenInstruction(perunAddr solana.PublicKey, params
 	)
 	return openIx, nil
 }
+
+func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) (solana.Instruction, error) {
+	data, err := encoding.MakeFundInstruction(chanID, funderIdx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create open instruction")
+	}
+	var channelID [32]byte
+	copy(channelID[:], chanID[:])
+	channelPDA, err := ChannelPDA(channelID, perunAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get channel PDA")
+	}
+
+	accounts := []*solana.AccountMeta{
+		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
+		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(system.ProgramID, false, false),                  // System program account
+	}
+	fundIx := solana.NewInstruction(
+		perunAddr, // Program ID
+		accounts,  // Accounts to be passed to the instruction
+		data,      // Instruction data
+	)
+	return fundIx, nil
+}

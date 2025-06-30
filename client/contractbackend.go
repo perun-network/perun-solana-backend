@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 
@@ -161,4 +162,39 @@ func (cb *ContractBackend) InvokeAndConfirmSignedTx(ctx context.Context, tx *sol
 	}
 
 	return cb.signer.sender.SendAndConfirmTx(ctx, tx, wsClient)
+}
+
+// GetBalance returns the balance of the given asset mint.
+// If the mint is the zero pubkey, it returns the SOL balance.
+func (cb *ContractBackend) GetBalance(mint solana.PublicKey) (string, error) {
+	ctx := context.Background()
+	client := cb.signer.sender.GetRPCClient()
+
+	// Check if mint is zero => SOL balance
+	if mint.IsZero() {
+		acctInfo, err := client.GetAccountInfo(ctx, cb.signer.participant.SolanaAddress)
+		if err != nil {
+			return "", fmt.Errorf("failed to get SOL account info: %w", err)
+		}
+		if acctInfo == nil || acctInfo.Value == nil {
+			return "", fmt.Errorf("no SOL account data found for %s", cb.signer.participant.SolanaAddress)
+		}
+		return fmt.Sprintf("%d", acctInfo.Value.Lamports), nil
+	}
+
+	// Otherwise, treat it as an SPL token and get ATA balance
+	ata, _, err := solana.FindAssociatedTokenAddress(cb.signer.participant.SolanaAddress, mint)
+	if err != nil {
+		return "", fmt.Errorf("failed to derive ATA: %w", err)
+	}
+
+	res, err := client.GetTokenAccountBalance(ctx, ata, rpc.CommitmentFinalized)
+	if err != nil {
+		return "", fmt.Errorf("failed to get SPL token balance: %w", err)
+	}
+	if res == nil || res.Value == nil {
+		return "", fmt.Errorf("no SPL balance info for ATA %s", ata)
+	}
+
+	return res.Value.Amount, nil // raw string amount
 }

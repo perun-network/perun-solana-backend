@@ -20,7 +20,7 @@ func NewAdjudicatorSubFromChannelID(ctx context.Context, id channel.ID) *Polling
 
 func (p *PollingSubscription) Next() channel.AdjudicatorEvent {
 	//TODO: implement Next in adjudicator subscription
-	panic("TODO: implement Next in adjudicator subscription")
+	return nil
 }
 
 func (p *PollingSubscription) Err() error {

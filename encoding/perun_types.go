@@ -3,6 +3,7 @@ package encoding
 import (
 	"math/big"
 
+	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/perun-network/perun-solana-backend/wallet"
 	"github.com/pkg/errors"
@@ -63,7 +64,15 @@ func MakeParticipant(participant wallet.Participant) (Participant, error) {
 
 // ChannelID represents the ID of a channel on-chain.
 type ChannelID struct {
-	ID [32]byte
+	Enum bin.BorshEnum `borsh_enum:"true"`
+	ID   [32]byte
+}
+
+func MakeChannelID(id [32]byte) ChannelID {
+	return ChannelID{
+		Enum: 0, // 0 for ChannelID enum
+		ID:   id,
+	}
 }
 
 // Params represents the parameters of a channel on-chain.

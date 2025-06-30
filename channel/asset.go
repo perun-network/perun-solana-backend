@@ -227,3 +227,15 @@ func (id ContractLID) MapKey() multi.LedgerIDMapKey {
 	}
 	return multi.LedgerIDMapKey(id.string)
 }
+
+// MakeAssetAddress generates a Solana asset address from a SolanaAsset.
+func MakeAssetAddress(asset SolanaAsset) (solana.PublicKey, error) {
+	if asset.IsSOL {
+		return solana.PublicKey{}, nil
+	}
+	if asset.Mint == nil {
+		return solana.PublicKey{}, errors.New("mint address is nil for token asset")
+	}
+
+	return *asset.Mint, nil
+}

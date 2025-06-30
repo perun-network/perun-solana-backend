@@ -20,7 +20,7 @@ var ErrCouldNotDecodeTx = errors.New("could not decode tx output")
 type SolanaClient interface {
 	Open(ctx context.Context, perunAddr solana.PublicKey, params *pchannel.Params, state *pchannel.State) error
 	Abort(ctx context.Context) error
-	Fund(ctx context.Context) error
+	Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) error
 	Dispute(ctx context.Context) error
 	Close(ctx context.Context) error
 	ForceClose(ctx context.Context) error
@@ -30,6 +30,7 @@ type SolanaClient interface {
 var _ SolanaClient = (*ContractBackend)(nil)
 
 func (cb *ContractBackend) Open(ctx context.Context, perunAddr solana.PublicKey, params *pchannel.Params, state *pchannel.State) error {
+	log.Println("Open called")
 	rpcClient := cb.signer.sender.GetRPCClient()
 	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
@@ -60,8 +61,32 @@ func (cb *ContractBackend) Abort(ctx context.Context) error {
 	return nil //TODO
 }
 
-func (cb *ContractBackend) Fund(ctx context.Context) error {
-	return nil //TODO
+func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) error {
+	log.Println("Fund called by contract backend")
+	rpcClient := cb.signer.sender.GetRPCClient()
+
+	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return errors.Wrap(err, "Fund: could not get latest blockhash")
+	}
+
+	fundIx, err := cb.NewFundInstruction(perunAddr, chanID, funderIdx)
+	if err != nil {
+		return errors.Wrap(err, "Fund: could not create fund instruction")
+	}
+	fundTx, err := solana.NewTransaction(
+		[]solana.Instruction{fundIx},
+		recent.Value.Blockhash,
+		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+	)
+	if err != nil {
+		return errors.Wrap(err, "Fund: could not create transaction")
+	}
+	_, err = cb.InvokeSignedTx(ctx, fundTx)
+	if err != nil {
+		return errors.Wrap(err, "Fund: could not invoke signed transaction")
+	}
+	return nil
 }
 
 func (cb *ContractBackend) Dispute(ctx context.Context) error {

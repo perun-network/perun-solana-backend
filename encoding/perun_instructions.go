@@ -88,7 +88,7 @@ func MakeFundInstruction(channelID [32]byte, partyIdx bool) ([]byte, error) {
 	enc := bin.NewBorshEncoder(buf)
 
 	instr := PerunInstruction{
-		Enum: bin.BorshEnum(1),
+		Enum: 1,
 		Fund: FundInstruction{
 			ChannelID: channelID,
 			PartyIdx:  partyIdx,
