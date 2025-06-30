@@ -7,6 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	pwallet "perun.network/go-perun/wallet"
+
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/gagliardetto/solana-go/rpc/ws"
@@ -23,16 +25,36 @@ const (
 type SolanaSigner struct {
 	privateKey  *solana.PrivateKey // The private key of the account that will be used to sign transactions.
 	participant *wallet.Participant
-	account     *wallet.Account // The account associated with the participant.
+	account     pwallet.Account // The account associated with the participant.
 	sender      Sender
 }
 
 type SignerConfig struct {
 	privateKey  *solana.PrivateKey
 	participant *wallet.Participant
-	account     *wallet.Account
+	account     pwallet.Account
 	sender      Sender
 	rpcURL      string // The RPC URL to connect to the Solana network.
+}
+
+func NewSignerConfig(
+	privateKey *solana.PrivateKey,
+	participant *wallet.Participant,
+	account pwallet.Account,
+	sender Sender,
+	rpcURL string,
+) *SignerConfig {
+	if privateKey.PublicKey() != participant.SolanaAddress {
+		panic("private key's public key does not match the participant's Solana address")
+	}
+	signerConfig := &SignerConfig{
+		privateKey:  privateKey,
+		participant: participant,
+		account:     account,
+		sender:      sender,
+		rpcURL:      rpcURL,
+	}
+	return signerConfig
 }
 
 func NewRandomConfig(rng *rand.Rand) *SignerConfig {
