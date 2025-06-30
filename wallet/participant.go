@@ -34,34 +34,20 @@ func NewParticipant(addr solana.PublicKey, pk *ecdsa.PublicKey, ccAddr [CCAddres
 func (p Participant) MarshalBinary() (data []byte, err error) {
 	// Marshal the Stellar public key using secp256k1's raw byte format (uncompressed)
 	//nolint:staticcheck
-	pubKeyECDH, err := p.PubKey.ECDH()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal ECDSA public key: %w", err)
-	}
-	pubKeyBytes := pubKeyECDH.Bytes()
-
-	// Marshal Solana address as base58 string
-	solAddrText, err := p.SolanaAddress.MarshalText()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal Solana address: %w", err)
-	}
-	if len(solAddrText) > 255 {
-		return nil, fmt.Errorf("base58 Solana address too long: %d bytes", len(solAddrText))
-	}
+	pubKeyBytes := elliptic.Marshal(p.PubKey.Curve, p.PubKey.X, p.PubKey.Y)
 
 	// Allocate and assemble buffer: [pubkey(65)] [sol_addr_len(1)] [sol_addr(n)] [ccaddr(fixed)]
-	res := make([]byte, 0, 65+1+len(solAddrText)+CCAddressLength)
+	res := make([]byte, 0, 65+32+CCAddressLength)
 	res = append(res, pubKeyBytes...)
-	res = append(res, byte(len(solAddrText))) // 1-byte length prefix
-	res = append(res, solAddrText...)         // Base58-encoded Solana address
-	res = append(res, p.CCAddr[:]...)         // Fixed-length CCAddr
+	res = append(res, p.SolanaAddress[:]...) // Fixed-length Solana address
+	res = append(res, p.CCAddr[:]...)        // Fixed-length CCAddr
 
 	return res, nil
 }
 
 // UnmarshalBinary decodes the participant from binary form.
 func (p *Participant) UnmarshalBinary(data []byte) error {
-	if len(data) < 65+1+CCAddressLength {
+	if len(data) != 65+32+CCAddressLength {
 		return fmt.Errorf("data too short to contain participant")
 	}
 
@@ -77,19 +63,10 @@ func (p *Participant) UnmarshalBinary(data []byte) error {
 	}
 
 	// Parse Solana address
-	solLen := int(data[65])
-	solStart := 66
-	solEnd := solStart + solLen
-
-	if solEnd+CCAddressLength > len(data) {
-		return fmt.Errorf("data too short for Solana address and CC address")
-	}
-	if err := p.SolanaAddress.UnmarshalText(data[solStart:solEnd]); err != nil {
-		return fmt.Errorf("failed to unmarshal Solana address: %w", err)
-	}
+	copy(p.SolanaAddress[:], data[65:97]) // 32 bytes for Solana address
 
 	// Parse CCAddr
-	copy(p.CCAddr[:], data[solEnd:solEnd+CCAddressLength])
+	copy(p.CCAddr[:], data[97:117]) // CCAddr is fixed length, 20 bytes
 
 	return nil
 }
