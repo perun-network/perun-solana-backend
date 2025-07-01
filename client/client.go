@@ -30,7 +30,7 @@ type SolanaClient interface {
 var _ SolanaClient = (*ContractBackend)(nil)
 
 func (cb *ContractBackend) Open(ctx context.Context, perunAddr solana.PublicKey, params *pchannel.Params, state *pchannel.State) error {
-	log.Println("Open called")
+	log.Println("Open called by contract backend")
 	rpcClient := cb.signer.sender.GetRPCClient()
 	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
@@ -50,7 +50,7 @@ func (cb *ContractBackend) Open(ctx context.Context, perunAddr solana.PublicKey,
 	if err != nil {
 		return errors.Wrap(err, "Open: could not create transaction")
 	}
-	_, err = cb.InvokeSignedTx(ctx, openTx)
+	_, err = cb.InvokeAndConfirmSignedTx(ctx, openTx)
 	if err != nil {
 		return errors.Wrap(err, "Open: could not invoke signed transaction")
 	}
@@ -112,7 +112,7 @@ func (cb *ContractBackend) GetChannelInfo(ctx context.Context, perunAddr solana.
 		ctx,
 		channelPDA,
 		&rpc.GetAccountInfoOpts{
-			Commitment: rpc.CommitmentConfirmed,
+			Commitment: rpc.CommitmentFinalized,
 		},
 	)
 	if err != nil {

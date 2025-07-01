@@ -67,9 +67,14 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-	} else {
-		time.Sleep(f.pollingInterval) // Wait for the channel to be opened
 	}
+	time.Sleep(2 * f.pollingInterval) // Wait for the channel to be opened
+	channelInfo, err := f.cb.GetChannelInfo(ctx, f.perunAddr, req.State.ID)
+	if err != nil {
+		log.Println("Error while getting channel info: ", err)
+		return err
+	}
+	log.Println("channel opened: ", channelInfo)
 
 	return f.fundParty(ctx, req)
 }
@@ -201,13 +206,6 @@ func (f *Funder) openChannel(ctx context.Context, req pchannel.FundingReq) error
 		return errors.Join(errors.New("error while opening channel in party A"), err)
 	}
 
-	time.Sleep(f.pollingInterval) // Wait for the channel to be opened
-	channelInfo, err := f.cb.GetChannelInfo(ctx, f.perunAddr, req.State.ID)
-	if err != nil {
-		log.Println("Error while getting channel info: ", err)
-		return err
-	}
-	log.Println("channel opened: ", channelInfo)
 	return nil
 }
 

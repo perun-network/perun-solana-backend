@@ -145,11 +145,14 @@ func (cb *ContractBackend) InvokeSignedTx(ctx context.Context, tx *solana.Transa
 	return cb.signer.sender.SendTx(ctx, tx)
 }
 
-func (cb *ContractBackend) InvokeAndConfirmSignedTx(ctx context.Context, tx *solana.Transaction, wsClient *ws.Client) (solana.Signature, error) {
+func (cb *ContractBackend) InvokeAndConfirmSignedTx(ctx context.Context, tx *solana.Transaction) (solana.Signature, error) {
 	cb.cbMutex.Lock()
 	defer cb.cbMutex.Unlock()
-
-	_, err := tx.Sign(
+	wsClient, err := ws.Connect(ctx, rpc.LocalNet_WS)
+	if err != nil {
+		return solana.Signature{}, errors.Wrap(err, "InvokeAndConfirmTx: could not connect to WebSocket client")
+	}
+	_, err = tx.Sign(
 		func(key solana.PublicKey) *solana.PrivateKey {
 			if cb.signer.privateKey.PublicKey() == key {
 				return cb.signer.privateKey
