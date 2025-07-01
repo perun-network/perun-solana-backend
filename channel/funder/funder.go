@@ -67,18 +67,33 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-	} else {
-		time.Sleep(f.pollingInterval) // Wait for the channel to be opened
 	}
-	time.Sleep(2 * f.pollingInterval) // Wait for the channel to be opened
-	channelInfo, err := f.cb.GetChannelInfo(ctx, f.perunAddr, req.State.ID)
-	if err != nil {
-		log.Println("Error while getting channel info: ", err)
-		return err
-	}
-	log.Println("channel opened: ", channelInfo)
+	for i := 0; i < f.maxIters; i++ {
+		select {
+		case <-ctx.Done():
+			timeoutErr := makeTimeoutErr([]pchannel.Index{req.Idx}, 0)
+			log.Println("Aborting channel due to timeout...")
+			return timeoutErr
 
-	return f.fundParty(ctx, req)
+		case <-time.After(f.pollingInterval):
+			log.Println("Polling for opened channel...")
+			channelInfo, err := f.cb.GetChannelInfo(ctx, f.perunAddr, req.State.ID)
+			if err != nil {
+				log.Println("Error while polling for opened channel: ", err)
+				continue
+			}
+			if channelInfo.State.ChannelID == req.State.ID {
+				log.Println("Channel already opened: ", channelInfo)
+				if channelInfo.Control.FundedA && channelInfo.Control.FundedB {
+					log.Println("Channel is already funded")
+					return nil
+				}
+				log.Println("Channel is not funded yet, proceeding to fund party...")
+				return f.fundParty(ctx, req)
+			}
+		}
+	}
+	return errors.New("channel not opened after max iterations")
 }
 
 func (f *Funder) fundParty(ctx context.Context, req pchannel.FundingReq) error {
@@ -154,7 +169,7 @@ func (f *Funder) fundParty(ctx context.Context, req pchannel.FundingReq) error {
 				continue
 			}
 			//nolint:nestif
-			if req.Idx == pchannel.Index(1) && !chanState.Control.FundedB && (chanState.Control.FundedA || !needFunding(req.State.Balances[0], req.State.Assets)) { // If party A has funded or does not need to fund, party B funds
+			if req.Idx == pchannel.Index(1) && !chanState.Control.FundedB {
 				log.Println("Funding party B")
 				shouldFund := needFunding(req.State.Balances[1], req.State.Assets)
 				if !shouldFund {
@@ -199,6 +214,7 @@ func (f *Funder) fundParty(ctx context.Context, req pchannel.FundingReq) error {
 
 // AbortChannel aborts the channel with the given state.
 func (f *Funder) AbortChannel(ctx context.Context, state *pchannel.State) error {
+	log.Println("Aborting channel...")
 	return f.cb.Abort(ctx)
 }
 

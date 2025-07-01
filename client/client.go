@@ -82,7 +82,7 @@ func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey,
 	if err != nil {
 		return errors.Wrap(err, "Fund: could not create transaction")
 	}
-	_, err = cb.InvokeSignedTx(ctx, fundTx)
+	_, err = cb.InvokeAndConfirmSignedTx(ctx, fundTx)
 	if err != nil {
 		return errors.Wrap(err, "Fund: could not invoke signed transaction")
 	}
@@ -106,7 +106,6 @@ func (cb *ContractBackend) GetChannelInfo(ctx context.Context, perunAddr solana.
 	if err != nil {
 		return encoding.Channel{}, errors.Wrap(err, "GetChannelInfo: could not get channel PDA")
 	}
-	log.Println("GetChannelInfo: channel PDA:", channelPDA)
 	rpcClient := cb.signer.sender.GetRPCClient()
 	accountInfo, err := rpcClient.GetAccountInfoWithOpts(
 		ctx,

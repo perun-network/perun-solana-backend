@@ -1,8 +1,6 @@
 package client
 
 import (
-	"log"
-
 	"github.com/gagliardetto/solana-go"
 	system "github.com/gagliardetto/solana-go/programs/system"
 	"github.com/perun-network/perun-solana-backend/encoding"
@@ -37,7 +35,6 @@ func (cb *ContractBackend) NewOpenInstruction(perunAddr solana.PublicKey, params
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get channel PDA")
 	}
-	log.Println("NewOpenInstruction: channel PDA:", channelPDA)
 
 	accounts := []*solana.AccountMeta{
 		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
