@@ -67,6 +67,8 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		time.Sleep(f.pollingInterval) // Wait for the channel to be opened
 	}
 	time.Sleep(2 * f.pollingInterval) // Wait for the channel to be opened
 	channelInfo, err := f.cb.GetChannelInfo(ctx, f.perunAddr, req.State.ID)
@@ -200,15 +202,6 @@ func (f *Funder) AbortChannel(ctx context.Context, state *pchannel.State) error 
 	return f.cb.Abort(ctx)
 }
 
-func (f *Funder) openChannel(ctx context.Context, req pchannel.FundingReq) error {
-	err := f.cb.Open(ctx, f.perunAddr, req.Params, req.State)
-	if err != nil {
-		return errors.Join(errors.New("error while opening channel in party A"), err)
-	}
-
-	return nil
-}
-
 // FundChannel funds the channel with the given state.
 func (f *Funder) FundChannel(ctx context.Context, state *pchannel.State, funderIdx bool) error {
 	balsSolana, err := encoding.MakeBalances(state.Allocation)
@@ -221,6 +214,15 @@ func (f *Funder) FundChannel(ctx context.Context, state *pchannel.State, funderI
 	}
 
 	return f.cb.Fund(ctx, f.perunAddr, state.ID, funderIdx)
+}
+
+func (f *Funder) openChannel(ctx context.Context, req pchannel.FundingReq) error {
+	err := f.cb.Open(ctx, f.perunAddr, req.Params, req.State)
+	if err != nil {
+		return errors.Join(errors.New("error while opening channel in party A"), err)
+	}
+
+	return nil
 }
 
 func getPartyByIndex(funderIdx pchannel.Index) string {
