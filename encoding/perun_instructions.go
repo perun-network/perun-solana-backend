@@ -100,3 +100,20 @@ func MakeFundInstruction(channelID [32]byte, partyIdx bool) ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
+
+func MakeAbortInstruction(channelID [32]byte) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := bin.NewBorshEncoder(buf)
+
+	instr := PerunInstruction{
+		Enum: 6,
+		AbortFunding: AbortFundingInstruction{
+			ChannelID: channelID,
+		},
+	}
+	if err := enc.Encode(&instr); err != nil {
+		return nil, errors.Wrap(err, "failed to encode abort instruction")
+	}
+
+	return buf.Bytes(), nil
+}

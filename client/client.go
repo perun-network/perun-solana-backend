@@ -19,7 +19,7 @@ var ErrCouldNotDecodeTx = errors.New("could not decode tx output")
 // It includes methods for opening, aborting, funding, disputing, closing, and force closing channels.
 type SolanaClient interface {
 	Open(ctx context.Context, perunAddr solana.PublicKey, params *pchannel.Params, state *pchannel.State) error
-	Abort(ctx context.Context) error
+	Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) error
 	Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) error
 	Dispute(ctx context.Context) error
 	Close(ctx context.Context) error
@@ -57,8 +57,33 @@ func (cb *ContractBackend) Open(ctx context.Context, perunAddr solana.PublicKey,
 	return nil
 }
 
-func (cb *ContractBackend) Abort(ctx context.Context) error {
-	return nil //TODO
+func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) error {
+	log.Println("Abort called by contract backend")
+	rpcClient := cb.signer.sender.GetRPCClient()
+
+	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return errors.Wrap(err, "Fund: could not get latest blockhash")
+	}
+
+	abortIx, err := cb.NewAbortInstruction(perunAddr, chanID)
+	if err != nil {
+		return errors.Wrap(err, "Abort: could not create abort instruction")
+	}
+	abortTx, err := solana.NewTransaction(
+		[]solana.Instruction{abortIx},
+		recent.Value.Blockhash,
+		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+	)
+	if err != nil {
+		return errors.Wrap(err, "Abort: could not create transaction")
+	}
+	_, err = cb.InvokeAndConfirmSignedTx(ctx, abortTx)
+	if err != nil {
+		return errors.Wrap(err, "Abort: could not invoke signed transaction")
+	}
+
+	return nil
 }
 
 func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) error {

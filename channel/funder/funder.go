@@ -215,7 +215,7 @@ func (f *Funder) fundParty(ctx context.Context, req pchannel.FundingReq) error {
 // AbortChannel aborts the channel with the given state.
 func (f *Funder) AbortChannel(ctx context.Context, state *pchannel.State) error {
 	log.Println("Aborting channel...")
-	return f.cb.Abort(ctx)
+	return f.cb.Abort(ctx, f.perunAddr, state.ID)
 }
 
 // FundChannel funds the channel with the given state.
