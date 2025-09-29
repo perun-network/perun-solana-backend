@@ -20,7 +20,7 @@ const (
 	DefaultPollingInterval  = time.Duration(4) * time.Second
 )
 
-// Funder is a struct that implements the Funder interface for Stellar.
+// Funder is a struct that implements the Funder interface for Solana.
 type Funder struct {
 	cb              *client.ContractBackend
 	perunAddr       solana.PublicKey

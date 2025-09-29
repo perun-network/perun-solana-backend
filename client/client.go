@@ -10,6 +10,7 @@ import (
 	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
+	pwallet "perun.network/go-perun/wallet"
 )
 
 // ErrCouldNotDecodeTx is returned when the tx could not be decoded.
@@ -22,8 +23,8 @@ type SolanaClient interface {
 	Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) error
 	Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) error
 	Dispute(ctx context.Context) error
-	Close(ctx context.Context) error
-	ForceClose(ctx context.Context) error
+	Close(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error
+	ForceClose(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error
 	GetChannelInfo(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) (encoding.Channel, error)
 }
 
@@ -63,7 +64,7 @@ func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey
 
 	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
-		return errors.Wrap(err, "Fund: could not get latest blockhash")
+		return errors.Wrap(err, "Abort: could not get latest blockhash")
 	}
 
 	channel, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
@@ -124,12 +125,93 @@ func (cb *ContractBackend) Dispute(ctx context.Context) error {
 	return nil //TODO
 }
 
-func (cb *ContractBackend) Close(ctx context.Context) error {
+func (cb *ContractBackend) Close(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error {
+	log.Println("Close called by contract backend")
+
+	rpcClient := cb.signer.sender.GetRPCClient()
+
+	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return errors.Wrap(err, "Close: could not get latest blockhash")
+	}
+
+	closeIx, err := cb.NewCloseInstruction(perunAddr, state, sigs)
+	if err != nil {
+		return errors.Wrap(err, "Close: could not create close instruction")
+	}
+	closeTx, err := solana.NewTransaction(
+		[]solana.Instruction{closeIx},
+		recent.Value.Blockhash,
+		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+	)
+	if err != nil {
+		return errors.Wrap(err, "Close: could not create transaction")
+	}
+	_, err = cb.InvokeAndConfirmSignedTx(ctx, closeTx)
+	if err != nil {
+		return errors.Wrap(err, "Close: could not invoke signed transaction")
+	}
+
+	return nil
+}
+
+func (cb *ContractBackend) ForceClose(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error {
 	return nil //TODO
 }
 
-func (cb *ContractBackend) ForceClose(ctx context.Context) error {
-	return nil //TODO
+// Withdraw withdraws the funds from the channel.
+//
+//nolint:funlen
+func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.PublicKey, req pchannel.AdjudicatorReq, withdrawerIdx bool, oneWithdrawer bool) error {
+	log.Println("Withdraw called by ContractBackend")
+
+	rpcClient := cb.signer.sender.GetRPCClient()
+
+	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return errors.Wrap(err, "Close: could not get latest blockhash")
+	}
+
+	chanID := req.Tx.State.ID
+	channel, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
+	if err != nil {
+		return errors.Wrap(err, "Abort: could not get channel info")
+	}
+	creator := solana.PublicKey(channel.Control.Creator)
+
+	withdrawIx, err := cb.NewWithdrawInstruction(perunAddr, chanID, withdrawerIdx, oneWithdrawer, creator)
+	if err != nil {
+		return errors.Wrap(err, "Withdraw: could not create withdraw instruction")
+	}
+
+	withdrawTx, err := solana.NewTransaction(
+		[]solana.Instruction{withdrawIx},
+		recent.Value.Blockhash,
+		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+	)
+	if err != nil {
+		return errors.Wrap(err, "Withdraw: could not create transaction")
+	}
+	_, err = cb.InvokeAndConfirmSignedTx(ctx, withdrawTx)
+	if err != nil {
+		return errors.Wrap(err, "Withdraw: could not invoke signed transaction")
+	}
+
+	// Check after withdraw.
+	bal, err := cb.GetBalance(cb.signer.participant.SolanaAddress)
+	if err != nil {
+		return errors.Wrap(err, "Withdraw: could not fetch balance after withdraw")
+	}
+	log.Println("Balance: ", bal, " after withdrawing: ", cb.signer.participant.SolanaAddress, req.Tx.State.Assets)
+
+	chanInfoAfterWithdrawn, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
+	if err != nil {
+		return errors.Wrap(err, "Withdraw: could not get channel info after withdraw")
+	}
+	if (withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnB) || (!withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnA) {
+		return nil
+	}
+	return nil
 }
 
 func (cb *ContractBackend) GetChannelInfo(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) (encoding.Channel, error) {

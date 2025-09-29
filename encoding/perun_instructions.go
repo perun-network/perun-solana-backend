@@ -117,3 +117,46 @@ func MakeAbortInstruction(channelID [32]byte) ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
+
+func MakeCloseInstruction(state *pchannel.State, sigA, sigB [65]byte) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := bin.NewBorshEncoder(buf)
+
+	bState, err := MakeChannelState(*state) // convert go-perun State to encoding ChannelState
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to make channel state")
+	}
+
+	instr := PerunInstruction{
+		Enum: 2,
+		Close: CloseInstruction{
+			State: bState,
+			SigA:  sigA,
+			SigB:  sigB,
+		},
+	}
+	if err := enc.Encode(&instr); err != nil {
+		return nil, errors.Wrap(err, "failed to encode close instruction")
+	}
+
+	return buf.Bytes(), nil
+}
+
+func MakeWithdrawInstruction(channelID [32]byte, partyIdx, oneWithdrawer bool) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := bin.NewBorshEncoder(buf)
+
+	instr := PerunInstruction{
+		Enum: 5,
+		Withdraw: WithdrawInstruction{
+			ChannelID:     channelID,
+			PartyIdx:      partyIdx,
+			OneWithdrawer: oneWithdrawer,
+		},
+	}
+	if err := enc.Encode(&instr); err != nil {
+		return nil, errors.Wrap(err, "failed to encode withdraw instruction")
+	}
+
+	return buf.Bytes(), nil
+}

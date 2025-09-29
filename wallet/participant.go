@@ -21,7 +21,7 @@ type Participant struct {
 	CCAddr [CCAddressLength]byte
 }
 
-// NewParticipant creates a new participant with the given Stellar address, public key, and cross-chain address.
+// NewParticipant creates a new participant with the given Solana address, public key, and cross-chain address.
 func NewParticipant(addr solana.PublicKey, pk *ecdsa.PublicKey, ccAddr [CCAddressLength]byte) *Participant {
 	return &Participant{
 		SolanaAddress: addr,
@@ -32,7 +32,7 @@ func NewParticipant(addr solana.PublicKey, pk *ecdsa.PublicKey, ccAddr [CCAddres
 
 // MarshalBinary encodes the participant into binary form.
 func (p Participant) MarshalBinary() (data []byte, err error) {
-	// Marshal the Stellar public key using secp256k1's raw byte format (uncompressed)
+	// Marshal the Solana public key using secp256k1's raw byte format (uncompressed)
 	//nolint:staticcheck
 	pubKeyBytes := elliptic.Marshal(p.PubKey.Curve, p.PubKey.X, p.PubKey.Y)
 
@@ -76,12 +76,12 @@ func (p Participant) String() string {
 	return p.AddressString() // + ":" + p.PublicKeyString()
 }
 
-// AddressString returns the Stellar address as a string.
+// AddressString returns the Solana address as a string.
 func (p Participant) AddressString() string {
 	return p.SolanaAddress.String()
 }
 
-// BackendID returns the Stellar backend ID.
+// BackendID returns the Solana backend ID.
 func (p Participant) BackendID() wallet.BackendID {
 	return channel.BackendID
 }

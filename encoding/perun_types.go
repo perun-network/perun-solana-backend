@@ -42,15 +42,15 @@ type Participant struct {
 // MakeParticipant creates a Participant from a types.Participant.
 func MakeParticipant(participant wallet.Participant) (Participant, error) {
 	if participant.PubKey == nil {
-		return Participant{}, errors.New("invalid Stellar public key length")
+		return Participant{}, errors.New("invalid Solana public key length")
 	}
 
 	if !participant.PubKey.Curve.IsOnCurve(participant.PubKey.X, participant.PubKey.Y) {
-		return Participant{}, errors.New("stellar public key is not on the curve")
+		return Participant{}, errors.New("solana public key is not on the curve")
 	}
 	pk := PublicKeyToBytes(participant.PubKey)
 	if len(pk) != 65 {
-		return Participant{}, errors.New("invalid Stellar public key length")
+		return Participant{}, errors.New("invalid Solana public key length")
 	}
 
 	var l2Pubkey [65]byte

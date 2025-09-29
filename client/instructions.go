@@ -6,6 +6,7 @@ import (
 	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
+	pwallet "perun.network/go-perun/wallet"
 )
 
 // ChannelPDA computes the Program Derived Address (PDA) for a Perun channel on Solana.
@@ -99,4 +100,63 @@ func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanI
 		data,      // Instruction data
 	)
 	return abortIx, nil
+}
+
+func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) (solana.Instruction, error) {
+	if len(sigs) != 2 {
+		return nil, errors.New("need exactly two signatures to close the channel")
+	}
+	var sigA [65]byte
+	copy(sigA[:], sigs[0][:])
+	var sigB [65]byte
+	copy(sigB[:], sigs[1][:])
+
+	data, err := encoding.MakeCloseInstruction(state, sigA, sigB)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create close instruction")
+	}
+
+	var channelID [32]byte
+	copy(channelID[:], state.ID[:])
+	channelPDA, err := ChannelPDA(channelID, perunAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get channel PDA")
+	}
+
+	accounts := []*solana.AccountMeta{
+		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
+		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+	}
+	closeIx := solana.NewInstruction(
+		perunAddr, // Program ID
+		accounts,  // Accounts to be passed to the instruction
+		data,      // Instruction data
+	)
+	return closeIx, nil
+}
+
+func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, withdrawerIdx bool, oneWithdrawer bool, creator solana.PublicKey) (solana.Instruction, error) {
+	data, err := encoding.MakeWithdrawInstruction(chanID, withdrawerIdx, oneWithdrawer)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create withdraw instruction")
+	}
+
+	var channelID [32]byte
+	copy(channelID[:], chanID[:])
+	channelPDA, err := ChannelPDA(channelID, perunAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get channel PDA")
+	}
+
+	accounts := []*solana.AccountMeta{
+		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
+		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(creator, true, false),                            // Channel creator's account
+	}
+	withdrawIx := solana.NewInstruction(
+		perunAddr, // Program ID
+		accounts,  // Accounts to be passed to the instruction
+		data,      // Instruction data
+	)
+	return withdrawIx, nil
 }
