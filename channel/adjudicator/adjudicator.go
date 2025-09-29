@@ -113,7 +113,7 @@ func (a Adjudicator) Progress(ctx context.Context, req pchannel.ProgressReq) err
 }
 
 func (a Adjudicator) Subscribe(ctx context.Context, id pchannel.ID) (pchannel.AdjudicatorSubscription, error) {
-	return NewAdjudicatorSubFromChannelID(ctx, id), nil
+	return NewAdjudicatorSubFromChannelID(ctx, id, a.cb, a.perunAddr, a.assetAddrs, a.challengeDuration), nil
 }
 
 func (a *Adjudicator) handleWithdrawal(ctx context.Context, req pchannel.AdjudicatorReq) error {
