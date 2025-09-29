@@ -22,6 +22,7 @@ type Control struct {
 	WithdrawnB bool
 	Disputed   bool
 	Timestamp  uint64
+	Creator    solana.PublicKey
 }
 
 // Channel represents a channel on the solana block-chain.

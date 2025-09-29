@@ -66,7 +66,13 @@ func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey
 		return errors.Wrap(err, "Fund: could not get latest blockhash")
 	}
 
-	abortIx, err := cb.NewAbortInstruction(perunAddr, chanID)
+	channel, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
+	if err != nil {
+		return errors.Wrap(err, "Abort: could not get channel info")
+	}
+	creator := solana.PublicKey(channel.Control.Creator)
+
+	abortIx, err := cb.NewAbortInstruction(perunAddr, chanID, creator)
 	if err != nil {
 		return errors.Wrap(err, "Abort: could not create abort instruction")
 	}

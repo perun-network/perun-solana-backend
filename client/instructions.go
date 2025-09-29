@@ -75,7 +75,7 @@ func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID
 	return fundIx, nil
 }
 
-func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanID pchannel.ID) (solana.Instruction, error) {
+func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, creator solana.PublicKey) (solana.Instruction, error) {
 	data, err := encoding.MakeAbortInstruction(chanID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create abort instruction")
@@ -91,7 +91,7 @@ func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanI
 	accounts := []*solana.AccountMeta{
 		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
-		solana.NewAccountMeta(system.ProgramID, false, false),                  // System program account
+		solana.NewAccountMeta(creator, true, false),                            // Channel creator's account
 	}
 	abortIx := solana.NewInstruction(
 		perunAddr, // Program ID
