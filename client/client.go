@@ -7,6 +7,8 @@ import (
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/perun-network/perun-solana-backend/channel"
+	"github.com/perun-network/perun-solana-backend/channel/event"
 	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
@@ -187,7 +189,7 @@ func (cb *ContractBackend) ForceClose(ctx context.Context, perunAddr solana.Publ
 	rpcClient := cb.signer.sender.GetRPCClient()
 	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
-		return errors.Wrap(err, "Close: could not get latest blockhash")
+		return errors.Wrap(err, "ForceClose: could not get latest blockhash")
 	}
 
 	forceCloseIx, err := cb.NewForceCloseInstruction(perunAddr, chanID)
@@ -220,15 +222,15 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 
 	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
-		return errors.Wrap(err, "Close: could not get latest blockhash")
+		return errors.Wrap(err, "Withdraw: could not get latest blockhash")
 	}
 
 	chanID := req.Tx.State.ID
-	channel, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
+	chanInfo, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
 	if err != nil {
-		return errors.Wrap(err, "Abort: could not get channel info")
+		return errors.Wrap(err, "Withdraw: could not get channel info")
 	}
-	creator := solana.PublicKey(channel.Control.Creator)
+	creator := solana.PublicKey(chanInfo.Control.Creator)
 	assets := req.Tx.State.Assets
 	withdrawIx, err := cb.NewWithdrawInstruction(perunAddr, chanID, assets, withdrawerIdx, oneWithdrawer, creator)
 	if err != nil {
@@ -249,11 +251,21 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 	}
 
 	// Check after withdraw.
-	bal, err := cb.GetBalance(cb.signer.participant.SolanaAddress)
-	if err != nil {
-		return errors.Wrap(err, "Withdraw: could not fetch balance after withdraw")
+	for _, asset := range assets {
+		if solanaAsset, ok := asset.(*channel.SolanaCrossAsset); ok {
+			// If asset is a solana asset, check balance after withdraw.
+			mint, err := encoding.MakeAddress(solanaAsset)
+			if err != nil {
+				return errors.Wrap(err, "Withdraw: could not make address for asset")
+			}
+
+			bal, err := cb.GetBalance(mint)
+			if err != nil {
+				return errors.Wrap(err, "Withdraw: could not fetch balance after withdraw")
+			}
+			log.Println("Balance: ", bal, " after withdrawing: ", cb.signer.participant.SolanaAddress, solanaAsset)
+		}
 	}
-	log.Println("Balance: ", bal, " after withdrawing: ", cb.signer.participant.SolanaAddress, req.Tx.State.Assets)
 
 	chanInfoAfterWithdrawn, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
 	if err != nil {
@@ -262,7 +274,7 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 	if (withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnB) || (!withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnA) {
 		return nil
 	}
-	return nil
+	return event.ErrNoWithdrawEvent
 }
 
 func (cb *ContractBackend) GetChannelInfo(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) (encoding.Channel, error) {

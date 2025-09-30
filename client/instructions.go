@@ -180,14 +180,14 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 	return closeIx, nil
 }
 
-func (cb *ContractBackend) NewForceCloseInstruction(perunAddr solana.PublicKey, state *pchannel.State) (solana.Instruction, error) {
-	data, err := encoding.MakeForceCloseInstruction(state)
+func (cb *ContractBackend) NewForceCloseInstruction(perunAddr solana.PublicKey, chanID pchannel.ID) (solana.Instruction, error) {
+	data, err := encoding.MakeForceCloseInstruction(chanID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create force close instruction")
 	}
 
 	var channelID [32]byte
-	copy(channelID[:], state.ID[:])
+	copy(channelID[:], chanID[:])
 	channelPDA, err := ChannelPDA(channelID, perunAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get channel PDA")

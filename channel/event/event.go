@@ -24,6 +24,10 @@ const (
 	EventTypeError                   // inconsistent event
 )
 
+var (
+	ErrNoWithdrawEvent = errors.New("withdraw event not found")
+)
+
 const AssertPerunSymbol = "perun"
 
 type (
