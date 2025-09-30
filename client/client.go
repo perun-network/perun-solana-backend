@@ -20,8 +20,8 @@ var ErrCouldNotDecodeTx = errors.New("could not decode tx output")
 // It includes methods for opening, aborting, funding, disputing, closing, and force closing channels.
 type SolanaClient interface {
 	Open(ctx context.Context, perunAddr solana.PublicKey, params *pchannel.Params, state *pchannel.State) error
-	Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) error
-	Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) error
+	Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset) error
+	Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset, funderIdx bool) error
 	Dispute(ctx context.Context) error
 	Close(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error
 	ForceClose(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error
@@ -58,7 +58,7 @@ func (cb *ContractBackend) Open(ctx context.Context, perunAddr solana.PublicKey,
 	return nil
 }
 
-func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) error {
+func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset) error {
 	log.Println("Abort called by contract backend")
 	rpcClient := cb.signer.sender.GetRPCClient()
 
@@ -73,7 +73,7 @@ func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey
 	}
 	creator := solana.PublicKey(channel.Control.Creator)
 
-	abortIx, err := cb.NewAbortInstruction(perunAddr, chanID, creator)
+	abortIx, err := cb.NewAbortInstruction(perunAddr, chanID, assets, creator)
 	if err != nil {
 		return errors.Wrap(err, "Abort: could not create abort instruction")
 	}
@@ -93,7 +93,7 @@ func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey
 	return nil
 }
 
-func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) error {
+func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset, funderIdx bool) error {
 	log.Println("Fund called by contract backend")
 	rpcClient := cb.signer.sender.GetRPCClient()
 
@@ -102,7 +102,7 @@ func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey,
 		return errors.Wrap(err, "Fund: could not get latest blockhash")
 	}
 
-	fundIx, err := cb.NewFundInstruction(perunAddr, chanID, funderIdx)
+	fundIx, err := cb.NewFundInstruction(perunAddr, chanID, assets, funderIdx)
 	if err != nil {
 		return errors.Wrap(err, "Fund: could not create fund instruction")
 	}
@@ -178,8 +178,8 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 		return errors.Wrap(err, "Abort: could not get channel info")
 	}
 	creator := solana.PublicKey(channel.Control.Creator)
-
-	withdrawIx, err := cb.NewWithdrawInstruction(perunAddr, chanID, withdrawerIdx, oneWithdrawer, creator)
+	assets := req.Tx.State.Assets
+	withdrawIx, err := cb.NewWithdrawInstruction(perunAddr, chanID, assets, withdrawerIdx, oneWithdrawer, creator)
 	if err != nil {
 		return errors.Wrap(err, "Withdraw: could not create withdraw instruction")
 	}

@@ -215,7 +215,7 @@ func (f *Funder) fundParty(ctx context.Context, req pchannel.FundingReq) error {
 // AbortChannel aborts the channel with the given state.
 func (f *Funder) AbortChannel(ctx context.Context, state *pchannel.State) error {
 	log.Println("Aborting channel...")
-	return f.cb.Abort(ctx, f.perunAddr, state.ID)
+	return f.cb.Abort(ctx, f.perunAddr, state.ID, state.Assets)
 }
 
 // FundChannel funds the channel with the given state.
@@ -229,7 +229,7 @@ func (f *Funder) FundChannel(ctx context.Context, state *pchannel.State, funderI
 		return errors.New("asset address is not equal to the address stored in the state")
 	}
 
-	return f.cb.Fund(ctx, f.perunAddr, state.ID, funderIdx)
+	return f.cb.Fund(ctx, f.perunAddr, state.ID, state.Assets, funderIdx)
 }
 
 func (f *Funder) openChannel(ctx context.Context, req pchannel.FundingReq) error {

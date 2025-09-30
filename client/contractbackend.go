@@ -201,3 +201,11 @@ func (cb *ContractBackend) GetBalance(mint solana.PublicKey) (string, error) {
 
 	return res.Value.Amount, nil // raw string amount
 }
+
+func (cb *ContractBackend) GetAssociatedTokenAccount(address solana.PublicKey, asset solana.PublicKey) (solana.PublicKey, error) {
+	ata, _, err := solana.FindAssociatedTokenAddress(address, asset)
+	if err != nil {
+		return solana.PublicKey{}, errors.Wrap(err, "GetAssociatedTokenAccount: could not derive ATA")
+	}
+	return ata, nil
+}

@@ -3,6 +3,7 @@ package client
 import (
 	"github.com/gagliardetto/solana-go"
 	system "github.com/gagliardetto/solana-go/programs/system"
+	"github.com/perun-network/perun-solana-backend/channel"
 	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
@@ -51,7 +52,7 @@ func (cb *ContractBackend) NewOpenInstruction(perunAddr solana.PublicKey, params
 	return openIx, nil
 }
 
-func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, funderIdx bool) (solana.Instruction, error) {
+func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset, funderIdx bool) (solana.Instruction, error) {
 	data, err := encoding.MakeFundInstruction(chanID, funderIdx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create open instruction")
@@ -68,6 +69,28 @@ func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
 		solana.NewAccountMeta(system.ProgramID, false, false),                  // System program account
 	}
+
+	for _, asset := range assets {
+		solAsset, ok := asset.(*channel.SolanaCrossAsset)
+		if ok {
+			if !solAsset.Asset.IsSOL {
+				actorAta, err := cb.GetAssociatedTokenAccount(cb.signer.participant.SolanaAddress, *solAsset.Asset.Mint)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get associated token account for channel")
+				}
+				channelAta, err := cb.GetAssociatedTokenAccount(channelPDA, *solAsset.Asset.Mint)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get associated token account for channel")
+				}
+				accounts = append(accounts, solana.NewAccountMeta(*solAsset.Asset.Mint, true, false))                       // Mint address of the token
+				accounts = append(accounts, solana.NewAccountMeta(actorAta, true, false))                                   // Signer's associated token account for the asset
+				accounts = append(accounts, solana.NewAccountMeta(channelAta, true, false))                                 // Channel's associated token account for the asset
+				accounts = append(accounts, solana.NewAccountMeta(solana.TokenProgramID, false, false))                     // SPL Token program account
+				accounts = append(accounts, solana.NewAccountMeta(solana.SPLAssociatedTokenAccountProgramID, false, false)) // Associated Token program account
+			}
+		}
+	}
+
 	fundIx := solana.NewInstruction(
 		perunAddr, // Program ID
 		accounts,  // Accounts to be passed to the instruction
@@ -76,7 +99,7 @@ func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID
 	return fundIx, nil
 }
 
-func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, creator solana.PublicKey) (solana.Instruction, error) {
+func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset, creator solana.PublicKey) (solana.Instruction, error) {
 	data, err := encoding.MakeAbortInstruction(chanID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create abort instruction")
@@ -92,8 +115,30 @@ func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanI
 	accounts := []*solana.AccountMeta{
 		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
-		solana.NewAccountMeta(creator, true, false),                            // Channel creator's account
 	}
+
+	for _, asset := range assets {
+		solAsset, ok := asset.(*channel.SolanaCrossAsset)
+		if ok {
+			if !solAsset.Asset.IsSOL {
+				actorAta, err := cb.GetAssociatedTokenAccount(cb.signer.participant.SolanaAddress, *solAsset.Asset.Mint)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get associated token account for actor")
+				}
+				channelAta, err := cb.GetAssociatedTokenAccount(channelPDA, *solAsset.Asset.Mint)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get associated token account for channel")
+				}
+				accounts = append(accounts, solana.NewAccountMeta(*solAsset.Asset.Mint, true, false))                       // Mint address of the token
+				accounts = append(accounts, solana.NewAccountMeta(actorAta, true, false))                                   // Signer's associated token account for the asset
+				accounts = append(accounts, solana.NewAccountMeta(channelAta, true, false))                                 // Channel's associated token account for the asset
+				accounts = append(accounts, solana.NewAccountMeta(solana.TokenProgramID, false, false))                     // SPL Token program account
+				accounts = append(accounts, solana.NewAccountMeta(solana.SPLAssociatedTokenAccountProgramID, false, false)) // Associated Token program account
+			}
+		}
+	}
+
+	accounts = append(accounts, solana.NewAccountMeta(creator, true, false)) // Channel creator's account
 	abortIx := solana.NewInstruction(
 		perunAddr, // Program ID
 		accounts,  // Accounts to be passed to the instruction
@@ -135,7 +180,7 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 	return closeIx, nil
 }
 
-func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, withdrawerIdx bool, oneWithdrawer bool, creator solana.PublicKey) (solana.Instruction, error) {
+func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset, withdrawerIdx bool, oneWithdrawer bool, creator solana.PublicKey) (solana.Instruction, error) {
 	data, err := encoding.MakeWithdrawInstruction(chanID, withdrawerIdx, oneWithdrawer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create withdraw instruction")
@@ -151,8 +196,30 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 	accounts := []*solana.AccountMeta{
 		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
-		solana.NewAccountMeta(creator, true, false),                            // Channel creator's account
 	}
+
+	for _, asset := range assets {
+		solAsset, ok := asset.(*channel.SolanaCrossAsset)
+		if ok {
+			if !solAsset.Asset.IsSOL {
+				actorAta, err := cb.GetAssociatedTokenAccount(cb.signer.participant.SolanaAddress, *solAsset.Asset.Mint)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get associated token account for channel")
+				}
+				channelAta, err := cb.GetAssociatedTokenAccount(channelPDA, *solAsset.Asset.Mint)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get associated token account for channel")
+				}
+				accounts = append(accounts, solana.NewAccountMeta(*solAsset.Asset.Mint, true, false))                       // Mint address of the token
+				accounts = append(accounts, solana.NewAccountMeta(actorAta, true, false))                                   // Signer's associated token account for the asset
+				accounts = append(accounts, solana.NewAccountMeta(channelAta, true, false))                                 // Channel's associated token account for the asset
+				accounts = append(accounts, solana.NewAccountMeta(solana.TokenProgramID, false, false))                     // SPL Token program account
+				accounts = append(accounts, solana.NewAccountMeta(solana.SPLAssociatedTokenAccountProgramID, false, false)) // Associated Token program account
+			}
+		}
+	}
+
+	accounts = append(accounts, solana.NewAccountMeta(creator, true, false)) // Channel creator's account
 	withdrawIx := solana.NewInstruction(
 		perunAddr, // Program ID
 		accounts,  // Accounts to be passed to the instruction
