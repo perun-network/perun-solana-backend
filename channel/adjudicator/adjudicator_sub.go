@@ -35,7 +35,7 @@ type PollingSubscription struct {
 	closer            *pkgsync.Closer
 	pollInterval      time.Duration
 	log               log.Embedding
-} //TODO
+}
 
 func NewAdjudicatorSubFromChannelID(ctx context.Context, cid pchannel.ID, cb *client.ContractBackend, perunAddr solana.PublicKey, assetAddrs []solana.PublicKey, challengeDuration *time.Duration) *PollingSubscription {
 	sub := &PollingSubscription{
@@ -193,7 +193,7 @@ func (p *PollingSubscription) Next() channel.AdjudicatorEvent {
 			dispEvent := pchannel.AdjudicatorEventBase{
 				VersionV: e.Version(),
 				IDV:      e.ID(),
-				TimeoutV: event.MakeTimeout(*s.challengeDuration),
+				TimeoutV: event.MakeTimeout(*p.challengeDuration),
 			}
 			adjDispEvent := &pchannel.RegisteredEvent{AdjudicatorEventBase: dispEvent, State: nil, Sigs: nil}
 			return adjDispEvent
@@ -205,7 +205,7 @@ func (p *PollingSubscription) Next() channel.AdjudicatorEvent {
 			conclEvent := pchannel.AdjudicatorEventBase{
 				VersionV: e.Version(),
 				IDV:      e.ID(),
-				TimeoutV: event.MakeTimeout(*s.challengeDuration),
+				TimeoutV: event.MakeTimeout(*p.challengeDuration),
 			}
 			adjConclEvent := &pchannel.ConcludedEvent{AdjudicatorEventBase: conclEvent}
 			return adjConclEvent
