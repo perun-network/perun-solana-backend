@@ -142,6 +142,47 @@ func MakeCloseInstruction(state *pchannel.State, sigA, sigB [65]byte) ([]byte, e
 	return buf.Bytes(), nil
 }
 
+func MakeForceCloseInstruction(channelID [32]byte) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := bin.NewBorshEncoder(buf)
+
+	instr := PerunInstruction{
+		Enum: 3,
+		ForceClose: ForceCloseInstruction{
+			ChannelID: channelID,
+		},
+	}
+	if err := enc.Encode(&instr); err != nil {
+		return nil, errors.Wrap(err, "failed to encode force close instruction")
+	}
+
+	return buf.Bytes(), nil
+}
+
+func MakeDisputeInstruction(state *pchannel.State, sigA, sigB [65]byte) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := bin.NewBorshEncoder(buf)
+
+	bState, err := MakeChannelState(*state)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to make channel state")
+	}
+
+	instr := PerunInstruction{
+		Enum: 4,
+		Dispute: DisputeInstruction{
+			State: bState,
+			SigA:  sigA,
+			SigB:  sigB,
+		},
+	}
+	if err := enc.Encode(&instr); err != nil {
+		return nil, errors.Wrap(err, "failed to encode dispute instruction")
+	}
+
+	return buf.Bytes(), nil
+}
+
 func MakeWithdrawInstruction(channelID [32]byte, partyIdx, oneWithdrawer bool) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	enc := bin.NewBorshEncoder(buf)

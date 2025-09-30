@@ -3,6 +3,7 @@ package adjudicator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -45,7 +46,12 @@ func NewAdjudicator(cb *client.ContractBackend, perunAddr solana.PublicKey, asse
 }
 
 func (a Adjudicator) Register(ctx context.Context, req pchannel.AdjudicatorReq, subChannels []pchannel.SignedState) error {
-	panic("TODO: implement Register in adjudicator")
+	log.Println("Register called by Adjudicator")
+	err := a.cb.Dispute(ctx, a.perunAddr, req.Tx.State, req.Tx.Sigs)
+	if err != nil {
+		return fmt.Errorf("error while disputing channel: %w", err)
+	}
+	return nil
 }
 
 func (a Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq, stateMap pchannel.StateMap) error {
@@ -96,7 +102,7 @@ func (a Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq, 
 		return err
 	}
 
-	if err := a.cb.ForceClose(ctx, a.perunAddr, req.Tx.State, req.Tx.Sigs); err != nil {
+	if err := a.cb.ForceClose(ctx, a.perunAddr, req.Tx.State.ID); err != nil {
 		log.Println("ForceClose called")
 		if errors.Is(err, ErrChannelAlreadyClosed) {
 			return a.handleWithdrawal(ctx, req)

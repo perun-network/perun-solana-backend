@@ -22,9 +22,9 @@ type SolanaClient interface {
 	Open(ctx context.Context, perunAddr solana.PublicKey, params *pchannel.Params, state *pchannel.State) error
 	Abort(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset) error
 	Fund(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID, assets []pchannel.Asset, funderIdx bool) error
-	Dispute(ctx context.Context) error
+	Dispute(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error
 	Close(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error
-	ForceClose(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error
+	ForceClose(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) error
 	GetChannelInfo(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) (encoding.Channel, error)
 }
 
@@ -121,8 +121,34 @@ func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey,
 	return nil
 }
 
-func (cb *ContractBackend) Dispute(ctx context.Context) error {
-	return nil //TODO
+func (cb *ContractBackend) Dispute(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error {
+	log.Println("Dispute called by contract backend")
+
+	rpcClient := cb.signer.sender.GetRPCClient()
+
+	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return errors.Wrap(err, "Dispute: could not get latest blockhash")
+	}
+
+	disputeIx, err := cb.NewDisputeInstruction(perunAddr, state, sigs)
+	if err != nil {
+		return errors.Wrap(err, "Dispute: could not create dispute instruction")
+	}
+	disputeTx, err := solana.NewTransaction(
+		[]solana.Instruction{disputeIx},
+		recent.Value.Blockhash,
+		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+	)
+	if err != nil {
+		return errors.Wrap(err, "Dispute: could not create transaction")
+	}
+	_, err = cb.InvokeAndConfirmSignedTx(ctx, disputeTx)
+	if err != nil {
+		return errors.Wrap(err, "Dispute: could not invoke signed transaction")
+	}
+
+	return nil
 }
 
 func (cb *ContractBackend) Close(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error {
@@ -155,15 +181,40 @@ func (cb *ContractBackend) Close(ctx context.Context, perunAddr solana.PublicKey
 	return nil
 }
 
-func (cb *ContractBackend) ForceClose(ctx context.Context, perunAddr solana.PublicKey, state *pchannel.State, sigs []pwallet.Sig) error {
-	return nil //TODO
+func (cb *ContractBackend) ForceClose(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) error {
+	log.Println("ForceClose called by contract backend")
+
+	rpcClient := cb.signer.sender.GetRPCClient()
+	recent, err := rpcClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return errors.Wrap(err, "Close: could not get latest blockhash")
+	}
+
+	forceCloseIx, err := cb.NewForceCloseInstruction(perunAddr, chanID)
+	if err != nil {
+		return errors.Wrap(err, "ForceClose: could not create force close instruction")
+	}
+	forceCloseTx, err := solana.NewTransaction(
+		[]solana.Instruction{forceCloseIx},
+		recent.Value.Blockhash,
+		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+	)
+	if err != nil {
+		return errors.Wrap(err, "ForceClose: could not create transaction")
+	}
+	_, err = cb.InvokeAndConfirmSignedTx(ctx, forceCloseTx)
+	if err != nil {
+		return errors.Wrap(err, "ForceClose: could not invoke signed transaction")
+	}
+
+	return nil
 }
 
 // Withdraw withdraws the funds from the channel.
 //
 //nolint:funlen
 func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.PublicKey, req pchannel.AdjudicatorReq, withdrawerIdx bool, oneWithdrawer bool) error {
-	log.Println("Withdraw called by ContractBackend")
+	log.Println("Withdraw called by contract backend")
 
 	rpcClient := cb.signer.sender.GetRPCClient()
 
