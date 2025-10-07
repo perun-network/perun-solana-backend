@@ -60,6 +60,16 @@ func (b backend) Sign(account wallet.Account, state *channel.State) (wallet.Sig,
 	if err != nil {
 		return nil, err
 	}
+
+	// Verify the signature before returning it.
+	ok, err := channel.Verify(account.Address(), state, sig)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errors.New("signature verification failed")
+	}
+
 	return sig, err
 }
 

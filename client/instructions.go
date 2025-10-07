@@ -151,6 +151,9 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 	if len(sigs) != 2 {
 		return nil, errors.New("need exactly two signatures to close the channel")
 	}
+	if len(sigs[0]) != 65 || len(sigs[1]) != 65 {
+		return nil, errors.New("signatures must be 65 bytes long")
+	}
 	var sigA [65]byte
 	copy(sigA[:], sigs[0][:])
 	var sigB [65]byte
