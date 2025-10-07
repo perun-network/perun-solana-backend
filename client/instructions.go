@@ -9,7 +9,6 @@ import (
 	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
-	"perun.network/go-perun/wallet"
 	pwallet "perun.network/go-perun/wallet"
 )
 
@@ -164,16 +163,6 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 	copy(sigB[:], sigs[1][:])
 	log.Println("Signature B:", sigB)
 
-	// Verify the signatures before proceeding.
-	// This is optional but adds an extra layer of security.
-	okA, err := cb.Verify(cb.signer.account.Address(), state, sigs[0])
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify signature A")
-	}
-	if !okA {
-		return nil, errors.New("signature A verification failed")
-	}
-
 	data, err := encoding.MakeCloseInstruction(state, sigA, sigB)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create close instruction")
@@ -256,6 +245,7 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 				accounts = append(accounts, solana.NewAccountMeta(*solAsset.Asset.Mint, true, false))                       // Mint address of the token
 				accounts = append(accounts, solana.NewAccountMeta(actorAta, true, false))                                   // Signer's associated token account for the asset
 				accounts = append(accounts, solana.NewAccountMeta(channelAta, true, false))                                 // Channel's associated token account for the asset
+				accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false))                    // System program account
 				accounts = append(accounts, solana.NewAccountMeta(solana.TokenProgramID, false, false))                     // SPL Token program account
 				accounts = append(accounts, solana.NewAccountMeta(solana.SPLAssociatedTokenAccountProgramID, false, false)) // Associated Token program account
 			}
@@ -302,14 +292,4 @@ func (cb *ContractBackend) NewDisputeInstruction(perunAddr solana.PublicKey, sta
 		data,      // Instruction data
 	)
 	return closeIx, nil
-}
-
-func (cb *ContractBackend) Verify(addr pwallet.Address, state *pchannel.State, sig pwallet.Sig) (bool, error) {
-	ethState := channel.ToEthState(state)
-	bytes, err := channel.EncodeEthState(&ethState)
-	if err != nil {
-		return false, err
-	}
-	log.Println("Verifying state:", bytes)
-	return wallet.VerifySignature(bytes, sig, addr)
 }
