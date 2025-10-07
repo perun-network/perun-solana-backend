@@ -310,5 +310,6 @@ func (cb *ContractBackend) Verify(addr pwallet.Address, state *pchannel.State, s
 	if err != nil {
 		return false, err
 	}
+	log.Println("Verifying state:", bytes)
 	return wallet.VerifySignature(bytes, sig, addr)
 }
