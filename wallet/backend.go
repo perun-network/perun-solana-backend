@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"io"
+	"log"
 
 	"github.com/pkg/errors"
 
@@ -42,6 +43,8 @@ func (b backend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Address) (
 	hash := crypto.Keccak256(msg)
 	prefix := []byte("\x19Ethereum Signed Message:\n32")
 	hash = crypto.Keccak256(prefix, hash)
+
+	log.Println("Verifying hash:", hash)
 	sigCopy := make([]byte, 65) //nolint:gomnd
 	copy(sigCopy, sig)
 	if len(sigCopy) == 65 && (sigCopy[65-1] >= 27) { //nolint:gomnd
