@@ -99,7 +99,8 @@ func (a Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq, 
 			return err
 		}
 		log.Println("closed channel, ", err)
-		return err
+
+		return a.handleWithdrawal(ctx, req)
 	}
 
 	if err := a.cb.ForceClose(ctx, a.perunAddr, req.Tx.State.ID); err != nil {
