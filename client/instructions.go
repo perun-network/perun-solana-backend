@@ -229,6 +229,7 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 		solana.NewAccountMeta(channelPDA, true, false),                          // Program account derived from channel ID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, false, true), // Participant's account
 	}
+	log.Println("Channel PDA:", channelPDA.String())
 
 	for _, asset := range assets {
 		solAsset, ok := asset.(*channel.SolanaCrossAsset)
@@ -251,11 +252,13 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 			} else {
 				// If the asset is not a SolanaCrossAsset, we assume it's SOL and add the SystemProgramID
 				accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false)) // System program account
+				log.Println("Added SystemProgramID for SOL withdrawal:", solana.SystemProgramID.String())
 			}
 		}
 	}
 	accounts = append(accounts, solana.NewAccountMeta(creator, true, false)) // Channel creator's account
 	log.Println("Withdraw signer:", cb.signer.participant.SolanaAddress.String())
+	log.Println("Creator:", creator.String())
 	log.Println("Withdraw instruction accounts:", accounts)
 	withdrawIx := solana.NewInstruction(
 		perunAddr, // Program ID
