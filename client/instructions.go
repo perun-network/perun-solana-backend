@@ -248,10 +248,10 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 				accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false))                    // System program account
 				accounts = append(accounts, solana.NewAccountMeta(solana.TokenProgramID, false, false))                     // SPL Token program account
 				accounts = append(accounts, solana.NewAccountMeta(solana.SPLAssociatedTokenAccountProgramID, false, false)) // Associated Token program account
+			} else {
+				// If the asset is not a SolanaCrossAsset, we assume it's SOL and add the SystemProgramID
+				accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false)) // System program account
 			}
-		} else {
-			// If the asset is not a SolanaCrossAsset, we assume it's SOL and add the SystemProgramID
-			accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false)) // System program account
 		}
 	}
 
