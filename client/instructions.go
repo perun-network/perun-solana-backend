@@ -256,6 +256,8 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 	}
 
 	accounts = append(accounts, solana.NewAccountMeta(creator, true, false)) // Channel creator's account
+
+	log.Println("Withdraw instruction accounts:", accounts)
 	withdrawIx := solana.NewInstruction(
 		perunAddr, // Program ID
 		accounts,  // Accounts to be passed to the instruction
