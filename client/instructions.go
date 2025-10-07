@@ -7,6 +7,7 @@ import (
 	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
+	"perun.network/go-perun/wallet"
 	pwallet "perun.network/go-perun/wallet"
 )
 
@@ -159,6 +160,16 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 	var sigB [65]byte
 	copy(sigB[:], sigs[1][:])
 
+	// Verify the signatures before proceeding.
+	// This is optional but adds an extra layer of security.
+	okA, err := cb.Verify(cb.signer.account.Address(), state, sigs[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to verify signature A")
+	}
+	if !okA {
+		return nil, errors.New("signature A verification failed")
+	}
+
 	data, err := encoding.MakeCloseInstruction(state, sigA, sigB)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create close instruction")
@@ -287,4 +298,13 @@ func (cb *ContractBackend) NewDisputeInstruction(perunAddr solana.PublicKey, sta
 		data,      // Instruction data
 	)
 	return closeIx, nil
+}
+
+func (cb *ContractBackend) Verify(addr pwallet.Address, state *pchannel.State, sig pwallet.Sig) (bool, error) {
+	ethState := channel.ToEthState(state)
+	bytes, err := channel.EncodeEthState(&ethState)
+	if err != nil {
+		return false, err
+	}
+	return wallet.VerifySignature(bytes, sig, addr)
 }
