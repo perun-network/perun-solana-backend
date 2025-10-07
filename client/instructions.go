@@ -24,6 +24,18 @@ func ChannelPDA(channelID [32]byte, perunAddr solana.PublicKey) (solana.PublicKe
 	return pda, nil
 }
 
+// EscrowPDA computes the Program Derived Address (PDA) for the escrow account of a Perun channel on Solana.
+func EscrowPDA(channelID [32]byte, perunAddr solana.PublicKey) (solana.PublicKey, error) {
+	pda, _, err := solana.FindProgramAddress([][]byte{
+		[]byte("escrow"),
+		channelID[:],
+	}, perunAddr)
+	if err != nil {
+		return solana.PublicKey{}, errors.Wrap(err, "could not find program address for escrow")
+	}
+	return pda, nil
+}
+
 // NewOpenInstruction creates a new Open instruction for the Perun channel.
 func (cb *ContractBackend) NewOpenInstruction(perunAddr solana.PublicKey, params *pchannel.Params, state *pchannel.State) (solana.Instruction, error) {
 	perunID := perunAddr // Perun program address, should be set to the actual Perun program address on Solana
@@ -40,10 +52,16 @@ func (cb *ContractBackend) NewOpenInstruction(perunAddr solana.PublicKey, params
 		return nil, errors.Wrap(err, "could not get channel PDA")
 	}
 
+	escrowPDA, err := EscrowPDA(channelID, perunAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get escrow PDA")
+	}
+
 	accounts := []*solana.AccountMeta{
 		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
 		solana.NewAccountMeta(system.ProgramID, false, false),                  // System program account
+		solana.NewAccountMeta(escrowPDA, true, false),                          // Escrow account
 	}
 
 	openIx := solana.NewInstruction(
@@ -66,10 +84,16 @@ func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID
 		return nil, errors.Wrap(err, "could not get channel PDA")
 	}
 
+	escrowPDA, err := EscrowPDA(channelID, perunAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get escrow PDA")
+	}
+
 	accounts := []*solana.AccountMeta{
 		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
 		solana.NewAccountMeta(system.ProgramID, false, false),                  // System program account
+		solana.NewAccountMeta(escrowPDA, true, false),                          // Escrow account
 	}
 
 	for _, asset := range assets {
@@ -225,11 +249,15 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 		return nil, errors.Wrap(err, "could not get channel PDA")
 	}
 
+	escrowPDA, err := EscrowPDA(channelID, perunAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get escrow PDA")
+	}
+
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                          // Program account derived from channel ID
+		solana.NewAccountMeta(channelPDA, false, false),                         // Program account derived from channel ID
 		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, false, true), // Participant's account
 	}
-	log.Println("Channel PDA:", channelPDA.String())
 
 	for _, asset := range assets {
 		solAsset, ok := asset.(*channel.SolanaCrossAsset)
@@ -251,12 +279,14 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 				accounts = append(accounts, solana.NewAccountMeta(solana.SPLAssociatedTokenAccountProgramID, false, false)) // Associated Token program account
 			} else {
 				// If the asset is not a SolanaCrossAsset, we assume it's SOL and add the SystemProgramID
+				accounts = append(accounts, solana.NewAccountMeta(escrowPDA, false, false))              // Escrow account
 				accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false)) // System program account
 				log.Println("Added SystemProgramID for SOL withdrawal:", solana.SystemProgramID.String())
 			}
 		}
 	}
-	accounts = append(accounts, solana.NewAccountMeta(creator, true, false)) // Channel creator's account
+	accounts = append(accounts, solana.NewAccountMeta(creator, true, false))   // Channel creator's account
+	accounts = append(accounts, solana.NewAccountMeta(escrowPDA, true, false)) // Escrow account
 	log.Println("Withdraw signer:", cb.signer.participant.SolanaAddress.String())
 	log.Println("Creator:", creator.String())
 	log.Println("Withdraw instruction accounts:", accounts)
