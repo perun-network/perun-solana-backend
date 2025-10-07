@@ -279,7 +279,7 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 				accounts = append(accounts, solana.NewAccountMeta(solana.SPLAssociatedTokenAccountProgramID, false, false)) // Associated Token program account
 			} else {
 				// If the asset is not a SolanaCrossAsset, we assume it's SOL and add the SystemProgramID
-				accounts = append(accounts, solana.NewAccountMeta(escrowPDA, false, false))              // Escrow account
+				accounts = append(accounts, solana.NewAccountMeta(escrowPDA, true, false))               // Escrow account
 				accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false)) // System program account
 				log.Println("Added SystemProgramID for SOL withdrawal:", solana.SystemProgramID.String())
 			}
