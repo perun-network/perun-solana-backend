@@ -1,6 +1,8 @@
 package client
 
 import (
+	"log"
+
 	"github.com/gagliardetto/solana-go"
 	system "github.com/gagliardetto/solana-go/programs/system"
 	"github.com/perun-network/perun-solana-backend/channel"
@@ -157,8 +159,10 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 	}
 	var sigA [65]byte
 	copy(sigA[:], sigs[0][:])
+	log.Println("Signature A:", sigA)
 	var sigB [65]byte
 	copy(sigB[:], sigs[1][:])
+	log.Println("Signature B:", sigB)
 
 	// Verify the signatures before proceeding.
 	// This is optional but adds an extra layer of security.
