@@ -3,7 +3,9 @@ package encoding
 import (
 	"bytes"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	bin "github.com/gagliardetto/binary"
+	"github.com/perun-network/perun-solana-backend/channel"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
 )
@@ -31,6 +33,7 @@ type FundInstruction struct {
 
 type CloseInstruction struct {
 	State ChannelState
+	Hash  [32]byte // Hash of the state being closed
 	SigA  [65]byte
 	SigB  [65]byte
 }
@@ -127,10 +130,22 @@ func MakeCloseInstruction(state *pchannel.State, sigA, sigB [65]byte) ([]byte, e
 		return nil, errors.Wrap(err, "failed to make channel state")
 	}
 
+	ethState := channel.ToEthState(state)
+	bytes, err := channel.EncodeEthState(&ethState)
+	if err != nil {
+		return nil, err
+	}
+	hash := crypto.Keccak256(bytes)
+	prefix := []byte("\x19Ethereum Signed Message:\n32")
+	hash = crypto.Keccak256(prefix, hash)
+	var hashArr [32]byte
+	copy(hashArr[:], hash)
+
 	instr := PerunInstruction{
 		Enum: 2,
 		Close: CloseInstruction{
 			State: bState,
+			Hash:  hashArr,
 			SigA:  sigA,
 			SigB:  sigB,
 		},
