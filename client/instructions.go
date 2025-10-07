@@ -226,8 +226,8 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 	}
 
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(channelPDA, true, false),                          // Program account derived from channel ID
+		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, false, true), // Participant's account
 	}
 
 	for _, asset := range assets {
@@ -254,9 +254,8 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 			}
 		}
 	}
-
 	accounts = append(accounts, solana.NewAccountMeta(creator, true, false)) // Channel creator's account
-
+	log.Println("Withdraw signer:", cb.signer.participant.SolanaAddress.String())
 	log.Println("Withdraw instruction accounts:", accounts)
 	withdrawIx := solana.NewInstruction(
 		perunAddr, // Program ID
