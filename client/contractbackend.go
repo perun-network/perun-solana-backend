@@ -30,6 +30,24 @@ type SolanaSigner struct {
 	sender      Sender
 }
 
+// GetAddress returns the address of the SolanaSigner.
+func (st *SolanaSigner) GetSolanaAddress() (solana.PublicKey, error) {
+	if st.privateKey != nil {
+		return st.privateKey.PublicKey(), nil
+	}
+	if st.participant != nil {
+		return st.participant.SolanaAddress, nil
+	}
+	if st.account != nil {
+		sacc, ok := st.account.(*wallet.Account)
+		if !ok {
+			return solana.PublicKey{}, errors.New("account is not of type *wallet.Account")
+		}
+		return sacc.ParticipantAddress, nil
+	}
+	return solana.PublicKey{}, errors.New("transactor cannot retrieve address")
+}
+
 type SignerConfig struct {
 	privateKey  *solana.PrivateKey
 	participant *wallet.Participant
@@ -72,7 +90,7 @@ func NewRandomConfig(rng *rand.Rand) *SignerConfig {
 	// Set the default RPC URL.
 	signerConfig.rpcURL = defaultSolanaRPC
 	// Create a new TxSender with the default RPC URL.
-	signerConfig.sender = NewTxSender(rpc.New(defaultSolanaRPC))
+	signerConfig.sender = NewTxSender(signerConfig.privateKey, rpc.New(defaultSolanaRPC))
 	return signerConfig
 }
 
@@ -96,7 +114,7 @@ func NewSolanaSigner(cfg SignerConfig) *SolanaSigner {
 		if cfg.rpcURL == "" {
 			cfg.rpcURL = defaultSolanaRPC // Use the default RPC URL if none is provided.
 		}
-		ss.sender = NewTxSender(rpc.New(cfg.rpcURL))
+		ss.sender = NewTxSender(ss.privateKey, rpc.New(cfg.rpcURL))
 	}
 
 	return ss
@@ -130,19 +148,7 @@ func (cb *ContractBackend) InvokeSignedTx(ctx context.Context, tx *solana.Transa
 	cb.cbMutex.Lock()
 	defer cb.cbMutex.Unlock()
 
-	_, err := tx.Sign(
-		func(key solana.PublicKey) *solana.PrivateKey {
-			if cb.signer.privateKey.PublicKey() == key {
-				return cb.signer.privateKey
-			}
-			return nil
-		},
-	)
-	if err != nil {
-		return solana.Signature{}, errors.Wrap(err, "InvokeTx: could not sign transaction")
-	}
-
-	return cb.signer.sender.SendTx(ctx, tx)
+	return cb.signer.sender.SignSendTx(ctx, tx)
 }
 
 func (cb *ContractBackend) InvokeAndConfirmSignedTx(ctx context.Context, tx *solana.Transaction) (solana.Signature, error) {
@@ -152,19 +158,8 @@ func (cb *ContractBackend) InvokeAndConfirmSignedTx(ctx context.Context, tx *sol
 	if err != nil {
 		return solana.Signature{}, errors.Wrap(err, "InvokeAndConfirmTx: could not connect to WebSocket client")
 	}
-	_, err = tx.Sign(
-		func(key solana.PublicKey) *solana.PrivateKey {
-			if cb.signer.privateKey.PublicKey() == key {
-				return cb.signer.privateKey
-			}
-			return nil
-		},
-	)
-	if err != nil {
-		return solana.Signature{}, errors.Wrap(err, "InvokeAndConfirmTx: could not sign transaction")
-	}
 
-	return cb.signer.sender.SendAndConfirmTx(ctx, tx, wsClient)
+	return cb.signer.sender.SignSendAndConfirmTx(ctx, tx, wsClient)
 }
 
 // GetBalance returns the balance of the given asset mint.

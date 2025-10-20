@@ -11,6 +11,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0
 	github.com/pkg/errors v0.9.1
 	perun.network/go-perun v0.13.0
+	polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37
 )
 
 require (
@@ -50,5 +51,4 @@ require (
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37 // indirect
 )

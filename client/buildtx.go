@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"errors"
+
+	"github.com/pkg/errors"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -11,19 +12,21 @@ import (
 )
 
 type Sender interface {
-	SendTx(context.Context, *solana.Transaction) (solana.Signature, error)
-	SendAndConfirmTx(context.Context, *solana.Transaction, *ws.Client) (solana.Signature, error)
+	SignSendTx(context.Context, *solana.Transaction) (solana.Signature, error)
+	SignSendAndConfirmTx(context.Context, *solana.Transaction, *ws.Client) (solana.Signature, error)
 	SetRPCClient(*rpc.Client) error
 	GetRPCClient() *rpc.Client
 }
 
 type TxSender struct {
-	rpcClient *rpc.Client // The RPC client used to send transactions.
+	privatekey *solana.PrivateKey
+	rpcClient  *rpc.Client // The RPC client used to send transactions.
 }
 
-func NewTxSender(rpcClient *rpc.Client) *TxSender {
+func NewTxSender(privateKey *solana.PrivateKey, rpcClient *rpc.Client) *TxSender {
 	return &TxSender{
-		rpcClient: rpcClient,
+		privatekey: privateKey,
+		rpcClient:  rpcClient,
 	}
 }
 
@@ -42,7 +45,19 @@ func (s *TxSender) GetRPCClient() *rpc.Client {
 	return s.rpcClient
 }
 
-func (s *TxSender) SendTx(ctx context.Context, tx *solana.Transaction) (solana.Signature, error) {
+func (s *TxSender) SignSendTx(ctx context.Context, tx *solana.Transaction) (solana.Signature, error) {
+	_, err := tx.Sign(
+		func(key solana.PublicKey) *solana.PrivateKey {
+			if s.privatekey.PublicKey() == key {
+				return s.privatekey
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return solana.Signature{}, errors.Wrap(err, "InvokeAndConfirmTx: could not sign transaction")
+	}
+
 	sig, err := s.rpcClient.SendTransaction(
 		ctx,
 		tx,
@@ -50,7 +65,19 @@ func (s *TxSender) SendTx(ctx context.Context, tx *solana.Transaction) (solana.S
 	return sig, err
 }
 
-func (s *TxSender) SendAndConfirmTx(ctx context.Context, tx *solana.Transaction, wsClient *ws.Client) (solana.Signature, error) {
+func (s *TxSender) SignSendAndConfirmTx(ctx context.Context, tx *solana.Transaction, wsClient *ws.Client) (solana.Signature, error) {
+	_, err := tx.Sign(
+		func(key solana.PublicKey) *solana.PrivateKey {
+			if s.privatekey.PublicKey() == key {
+				return s.privatekey
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return solana.Signature{}, errors.Wrap(err, "InvokeAndConfirmTx: could not sign transaction")
+	}
+
 	sig, err := confirm.SendAndConfirmTransaction(
 		ctx,
 		s.rpcClient,

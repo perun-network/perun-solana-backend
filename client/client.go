@@ -45,10 +45,15 @@ func (cb *ContractBackend) Open(ctx context.Context, perunAddr solana.PublicKey,
 		return errors.Wrap(err, "Open: could not create open instruction")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return errors.Wrap(err, "Open: could not get payer address")
+	}
+
 	openTx, err := solana.NewTransaction(
 		[]solana.Instruction{openIx},
 		recent.Value.Blockhash,
-		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+		solana.TransactionPayer(payer),
 	)
 	if err != nil {
 		return errors.Wrap(err, "Open: could not create transaction")
@@ -79,10 +84,16 @@ func (cb *ContractBackend) Abort(ctx context.Context, perunAddr solana.PublicKey
 	if err != nil {
 		return errors.Wrap(err, "Abort: could not create abort instruction")
 	}
+
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return errors.Wrap(err, "Abort: could not get payer address")
+	}
+
 	abortTx, err := solana.NewTransaction(
 		[]solana.Instruction{abortIx},
 		recent.Value.Blockhash,
-		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+		solana.TransactionPayer(payer),
 	)
 	if err != nil {
 		return errors.Wrap(err, "Abort: could not create transaction")
@@ -108,10 +119,16 @@ func (cb *ContractBackend) Fund(ctx context.Context, perunAddr solana.PublicKey,
 	if err != nil {
 		return errors.Wrap(err, "Fund: could not create fund instruction")
 	}
+
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return errors.Wrap(err, "Fund: could not get payer address")
+	}
+
 	fundTx, err := solana.NewTransaction(
 		[]solana.Instruction{fundIx},
 		recent.Value.Blockhash,
-		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+		solana.TransactionPayer(payer),
 	)
 	if err != nil {
 		return errors.Wrap(err, "Fund: could not create transaction")
@@ -137,10 +154,16 @@ func (cb *ContractBackend) Dispute(ctx context.Context, perunAddr solana.PublicK
 	if err != nil {
 		return errors.Wrap(err, "Dispute: could not create dispute instruction")
 	}
+
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return errors.Wrap(err, "Dispute: could not get payer address")
+	}
+
 	disputeTx, err := solana.NewTransaction(
 		[]solana.Instruction{disputeIx},
 		recent.Value.Blockhash,
-		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+		solana.TransactionPayer(payer),
 	)
 	if err != nil {
 		return errors.Wrap(err, "Dispute: could not create transaction")
@@ -167,10 +190,16 @@ func (cb *ContractBackend) Close(ctx context.Context, perunAddr solana.PublicKey
 	if err != nil {
 		return errors.Wrap(err, "Close: could not create close instruction")
 	}
+
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return errors.Wrap(err, "Close: could not get payer address")
+	}
+
 	closeTx, err := solana.NewTransaction(
 		[]solana.Instruction{closeIx},
 		recent.Value.Blockhash,
-		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+		solana.TransactionPayer(payer),
 	)
 	if err != nil {
 		return errors.Wrap(err, "Close: could not create transaction")
@@ -196,10 +225,16 @@ func (cb *ContractBackend) ForceClose(ctx context.Context, perunAddr solana.Publ
 	if err != nil {
 		return errors.Wrap(err, "ForceClose: could not create force close instruction")
 	}
+
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return errors.Wrap(err, "ForceClose: could not get payer address")
+	}
+
 	forceCloseTx, err := solana.NewTransaction(
 		[]solana.Instruction{forceCloseIx},
 		recent.Value.Blockhash,
-		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+		solana.TransactionPayer(payer),
 	)
 	if err != nil {
 		return errors.Wrap(err, "ForceClose: could not create transaction")
@@ -237,10 +272,15 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 		return errors.Wrap(err, "Withdraw: could not create withdraw instruction")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return errors.Wrap(err, "Withdraw: could not get payer address")
+	}
+
 	withdrawTx, err := solana.NewTransaction(
 		[]solana.Instruction{withdrawIx},
 		recent.Value.Blockhash,
-		solana.TransactionPayer(cb.signer.privateKey.PublicKey()),
+		solana.TransactionPayer(payer),
 	)
 	if err != nil {
 		return errors.Wrap(err, "Withdraw: could not create transaction")
