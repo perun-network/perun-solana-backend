@@ -183,6 +183,14 @@ func NewTokenSolanaCrossAsset(mintAddr *solana.PublicKey, contractID ContractLID
 	}
 }
 
+func NewSolanaCrossAssetFromMint(mintAddr solana.PublicKey) *SolanaCrossAsset {
+	contractID := MakeContractID(SolanaContractID)
+	if mintAddr.IsZero() {
+		return NewSOLSolanaCrossAsset()
+	}
+	return NewTokenSolanaCrossAsset(&mintAddr, contractID)
+}
+
 // MakeCCID makes a CCID for the given id.
 func MakeCCID(contractID ContractLID) CCID {
 	return CCID{BackendID, contractID}
