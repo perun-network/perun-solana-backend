@@ -176,8 +176,8 @@ func NewSOLSolanaCrossAsset() *SolanaCrossAsset {
 	}
 }
 
-func NewTokenSolanaCrossAsset(mintAddr *solana.PublicKey, contractID ContractLID) SolanaCrossAsset {
-	return SolanaCrossAsset{
+func NewTokenSolanaCrossAsset(mintAddr *solana.PublicKey, contractID ContractLID) *SolanaCrossAsset {
+	return &SolanaCrossAsset{
 		id:    MakeCCID(contractID),
 		Asset: NewTokenAsset(mintAddr),
 	}
