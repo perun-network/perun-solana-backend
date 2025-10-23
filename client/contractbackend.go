@@ -63,9 +63,6 @@ func NewSignerConfig(
 	sender Sender,
 	rpcURL string,
 ) *SignerConfig {
-	if privateKey.PublicKey() != participant.SolanaAddress {
-		panic("private key's public key does not match the participant's Solana address")
-	}
 	signerConfig := &SignerConfig{
 		privateKey:  privateKey,
 		participant: participant,
