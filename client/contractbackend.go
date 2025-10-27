@@ -39,11 +39,12 @@ func (st *SolanaSigner) GetSolanaAddress() (solana.PublicKey, error) {
 		return st.participant.SolanaAddress, nil
 	}
 	if st.account != nil {
-		sacc, ok := st.account.(*wallet.Account)
+		addr := st.account.Address()
+		saddr, ok := addr.(*wallet.Participant)
 		if !ok {
-			return solana.PublicKey{}, errors.New("account is not of type *wallet.Account")
+			return solana.PublicKey{}, errors.New("account is not of type *wallet.Participant")
 		}
-		return sacc.ParticipantAddress, nil
+		return saddr.SolanaAddress, nil
 	}
 	return solana.PublicKey{}, errors.New("transactor cannot retrieve address")
 }
