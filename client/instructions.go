@@ -57,11 +57,16 @@ func (cb *ContractBackend) NewOpenInstruction(perunAddr solana.PublicKey, params
 		return nil, errors.Wrap(err, "could not get escrow PDA")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "Open: could not get payer address")
+	}
+
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
-		solana.NewAccountMeta(system.ProgramID, false, false),                  // System program account
-		solana.NewAccountMeta(escrowPDA, true, false),                          // Escrow account
+		solana.NewAccountMeta(channelPDA, true, false),        // Program account derived from channel ID
+		solana.NewAccountMeta(payer, true, true),              // Participant's account
+		solana.NewAccountMeta(system.ProgramID, false, false), // System program account
+		solana.NewAccountMeta(escrowPDA, true, false),         // Escrow account
 	}
 
 	openIx := solana.NewInstruction(
@@ -89,11 +94,16 @@ func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID
 		return nil, errors.Wrap(err, "could not get escrow PDA")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "Fund: could not get payer address")
+	}
+
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
-		solana.NewAccountMeta(system.ProgramID, false, false),                  // System program account
-		solana.NewAccountMeta(escrowPDA, true, false),                          // Escrow account
+		solana.NewAccountMeta(channelPDA, true, false),        // Program account derived from channel ID
+		solana.NewAccountMeta(payer, true, true),              // Participant's account
+		solana.NewAccountMeta(system.ProgramID, false, false), // System program account
+		solana.NewAccountMeta(escrowPDA, true, false),         // Escrow account
 	}
 
 	for _, asset := range assets {
@@ -138,9 +148,14 @@ func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanI
 		return nil, errors.Wrap(err, "could not get channel PDA")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "Abort: could not get payer address")
+	}
+
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(channelPDA, true, false), // Program account derived from channel ID
+		solana.NewAccountMeta(payer, true, true),       // Participant's account
 	}
 
 	for _, asset := range assets {
@@ -199,9 +214,14 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 		return nil, errors.Wrap(err, "could not get channel PDA")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "Close: could not get payer address")
+	}
+
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(channelPDA, true, false), // Program account derived from channel ID
+		solana.NewAccountMeta(payer, true, true),       // Participant's account
 	}
 	closeIx := solana.NewInstruction(
 		perunAddr, // Program ID
@@ -224,9 +244,14 @@ func (cb *ContractBackend) NewForceCloseInstruction(perunAddr solana.PublicKey, 
 		return nil, errors.Wrap(err, "could not get channel PDA")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "ForceClose: could not get payer address")
+	}
+
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(channelPDA, true, false), // Program account derived from channel ID
+		solana.NewAccountMeta(payer, true, true),       // Participant's account
 	}
 	forceCloseIx := solana.NewInstruction(
 		perunAddr, // Program ID
