@@ -287,6 +287,7 @@ func assetSliceToSet(assets []solana.PublicKey) map[string]struct{} {
 
 // needFunding checks if a participant needs to fund the channel.
 func needFunding(balances []pchannel.Bal, assets []pchannel.Asset) bool {
+	log.Println("Checking if participant needs to fund...", balances, assets)
 	for i, bal := range balances {
 		_, ok := assets[i].(*channel.SolanaCrossAsset)
 		if bal.Cmp(big.NewInt(0)) != 0 && ok { // if balance is non 0 and asset is a solana asset, participant needs to fund
