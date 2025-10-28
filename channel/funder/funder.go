@@ -126,7 +126,7 @@ func (f *Funder) fundParty(ctx context.Context, req pchannel.FundingReq) error {
 			}
 
 			if req.Idx == pchannel.Index(0) && !chanState.Control.FundedA { //nolint:nestif
-				shouldFund := needFunding(req.State.Balances[0], req.State.Assets)
+				shouldFund := needFunding(0, req.State.Balances, req.State.Assets)
 				if !shouldFund {
 					log.Println("Party A does not need to fund")
 					return nil
@@ -171,7 +171,7 @@ func (f *Funder) fundParty(ctx context.Context, req pchannel.FundingReq) error {
 			//nolint:nestif
 			if req.Idx == pchannel.Index(1) && !chanState.Control.FundedB {
 				log.Println("Funding party B")
-				shouldFund := needFunding(req.State.Balances[1], req.State.Assets)
+				shouldFund := needFunding(1, req.State.Balances, req.State.Assets)
 				if !shouldFund {
 					log.Println("Party B does not need to fund", req.State.Balances[1], req.State.Assets)
 					return nil
@@ -286,11 +286,11 @@ func assetSliceToSet(assets []solana.PublicKey) map[string]struct{} {
 }
 
 // needFunding checks if a participant needs to fund the channel.
-func needFunding(balances []pchannel.Bal, assets []pchannel.Asset) bool {
+func needFunding(idx int, balances [][]pchannel.Bal, assets []pchannel.Asset) bool {
 	log.Println("Checking if participant needs to fund...", balances, assets)
-	for i, bal := range balances {
+	for i, bals := range balances {
 		_, ok := assets[i].(*channel.SolanaCrossAsset)
-		if bal.Cmp(big.NewInt(0)) != 0 && ok { // if balance is non 0 and asset is a solana asset, participant needs to fund
+		if bals[idx].Cmp(big.NewInt(0)) != 0 && ok { // if balance is non 0 and asset is a solana asset, participant needs to fund
 			return true
 		}
 	}
