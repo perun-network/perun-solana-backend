@@ -8,7 +8,6 @@ import (
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/perun-network/perun-solana-backend/channel"
-	"github.com/perun-network/perun-solana-backend/channel/event"
 	"github.com/perun-network/perun-solana-backend/encoding"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
@@ -307,14 +306,7 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 		}
 	}
 
-	chanInfoAfterWithdrawn, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
-	if err != nil {
-		return nil // Channel closed successfully.
-	}
-	if (withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnB) || (!withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnA) {
-		return nil
-	}
-	return event.ErrNoWithdrawEvent
+	return nil
 }
 
 func (cb *ContractBackend) GetChannelInfo(ctx context.Context, perunAddr solana.PublicKey, chanID pchannel.ID) (encoding.Channel, error) {
