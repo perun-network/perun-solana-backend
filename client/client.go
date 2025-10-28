@@ -303,7 +303,7 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 			if err != nil {
 				return errors.Wrap(err, "Withdraw: could not fetch balance after withdraw")
 			}
-			log.Println("Balance: ", bal, " after withdrawing: ", cb.signer.participant.SolanaAddress, solanaAsset)
+			log.Println("Balance: ", bal, " after withdrawing: ", payer, solanaAsset)
 		}
 	}
 

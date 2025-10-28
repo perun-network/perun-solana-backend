@@ -166,20 +166,24 @@ func (cb *ContractBackend) GetBalance(mint solana.PublicKey) (string, error) {
 	ctx := context.Background()
 	client := cb.signer.sender.GetRPCClient()
 
+	addr, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return "", fmt.Errorf("failed to get signer address: %w", err)
+	}
 	// Check if mint is zero => SOL balance
 	if mint.IsZero() {
-		acctInfo, err := client.GetAccountInfo(ctx, cb.signer.participant.SolanaAddress)
+		acctInfo, err := client.GetAccountInfo(ctx, addr)
 		if err != nil {
 			return "", fmt.Errorf("failed to get SOL account info: %w", err)
 		}
 		if acctInfo == nil || acctInfo.Value == nil {
-			return "", fmt.Errorf("no SOL account data found for %s", cb.signer.participant.SolanaAddress)
+			return "", fmt.Errorf("no SOL account data found for %s", addr)
 		}
 		return fmt.Sprintf("%d", acctInfo.Value.Lamports), nil
 	}
 
 	// Otherwise, treat it as an SPL token and get ATA balance
-	ata, _, err := solana.FindAssociatedTokenAddress(cb.signer.participant.SolanaAddress, mint)
+	ata, _, err := solana.FindAssociatedTokenAddress(addr, mint)
 	if err != nil {
 		return "", fmt.Errorf("failed to derive ATA: %w", err)
 	}

@@ -1,8 +1,6 @@
 package client
 
 import (
-	"log"
-
 	"github.com/gagliardetto/solana-go"
 	system "github.com/gagliardetto/solana-go/programs/system"
 	"github.com/perun-network/perun-solana-backend/channel"
@@ -110,7 +108,7 @@ func (cb *ContractBackend) NewFundInstruction(perunAddr solana.PublicKey, chanID
 		solAsset, ok := asset.(*channel.SolanaCrossAsset)
 		if ok {
 			if !solAsset.Asset.IsSOL {
-				actorAta, err := cb.GetAssociatedTokenAccount(cb.signer.participant.SolanaAddress, *solAsset.Asset.Mint)
+				actorAta, err := cb.GetAssociatedTokenAccount(payer, *solAsset.Asset.Mint)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get associated token account for channel")
 				}
@@ -162,7 +160,7 @@ func (cb *ContractBackend) NewAbortInstruction(perunAddr solana.PublicKey, chanI
 		solAsset, ok := asset.(*channel.SolanaCrossAsset)
 		if ok {
 			if !solAsset.Asset.IsSOL {
-				actorAta, err := cb.GetAssociatedTokenAccount(cb.signer.participant.SolanaAddress, *solAsset.Asset.Mint)
+				actorAta, err := cb.GetAssociatedTokenAccount(payer, *solAsset.Asset.Mint)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get associated token account for actor")
 				}
@@ -197,10 +195,8 @@ func (cb *ContractBackend) NewCloseInstruction(perunAddr solana.PublicKey, state
 	}
 	var sigA [65]byte
 	copy(sigA[:], sigs[0][:])
-	log.Println("Signature A:", sigA)
 	var sigB [65]byte
 	copy(sigB[:], sigs[1][:])
-	log.Println("Signature B:", sigB)
 
 	data, err := encoding.MakeCloseInstruction(state, sigA, sigB)
 	if err != nil {
@@ -279,16 +275,21 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 		return nil, errors.Wrap(err, "could not get escrow PDA")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "Withdraw: could not get payer address")
+	}
+
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(channelPDA, true, false), // Program account derived from channel ID
+		solana.NewAccountMeta(payer, true, true),       // Participant's account
 	}
 
 	for _, asset := range assets {
 		solAsset, ok := asset.(*channel.SolanaCrossAsset)
 		if ok {
 			if !solAsset.Asset.IsSOL {
-				actorAta, err := cb.GetAssociatedTokenAccount(cb.signer.participant.SolanaAddress, *solAsset.Asset.Mint)
+				actorAta, err := cb.GetAssociatedTokenAccount(payer, *solAsset.Asset.Mint)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get associated token account for channel")
 				}
@@ -306,14 +307,10 @@ func (cb *ContractBackend) NewWithdrawInstruction(perunAddr solana.PublicKey, ch
 				// If the asset is not a SolanaCrossAsset, we assume it's SOL and add the SystemProgramID
 				accounts = append(accounts, solana.NewAccountMeta(escrowPDA, true, false))               // Escrow account
 				accounts = append(accounts, solana.NewAccountMeta(solana.SystemProgramID, false, false)) // System program account
-				log.Println("Added SystemProgramID for SOL withdrawal:", solana.SystemProgramID.String())
 			}
 		}
 	}
 	accounts = append(accounts, solana.NewAccountMeta(creator, true, false)) // Channel creator's account
-	log.Println("Withdraw signer:", cb.signer.participant.SolanaAddress.String())
-	log.Println("Creator:", creator.String())
-	log.Println("Withdraw instruction accounts:", accounts)
 	withdrawIx := solana.NewInstruction(
 		perunAddr, // Program ID
 		accounts,  // Accounts to be passed to the instruction
@@ -336,6 +333,11 @@ func (cb *ContractBackend) NewDisputeInstruction(perunAddr solana.PublicKey, sta
 		return nil, errors.Wrap(err, "could not create dispute instruction")
 	}
 
+	payer, err := cb.signer.GetSolanaAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "Dispute: could not get payer address")
+	}
+
 	var channelID [32]byte
 	copy(channelID[:], state.ID[:])
 	channelPDA, err := ChannelPDA(channelID, perunAddr)
@@ -344,8 +346,8 @@ func (cb *ContractBackend) NewDisputeInstruction(perunAddr solana.PublicKey, sta
 	}
 
 	accounts := []*solana.AccountMeta{
-		solana.NewAccountMeta(channelPDA, true, false),                         // Program account derived from channel ID
-		solana.NewAccountMeta(cb.signer.participant.SolanaAddress, true, true), // Participant's account
+		solana.NewAccountMeta(channelPDA, true, false), // Program account derived from channel ID
+		solana.NewAccountMeta(payer, true, true),       // Participant's account
 	}
 	closeIx := solana.NewInstruction(
 		perunAddr, // Program ID
