@@ -309,7 +309,7 @@ func (cb *ContractBackend) Withdraw(ctx context.Context, perunAddr solana.Public
 
 	chanInfoAfterWithdrawn, err := cb.GetChannelInfo(ctx, perunAddr, chanID)
 	if err != nil {
-		return errors.Wrap(err, "Withdraw: could not get channel info after withdraw")
+		return nil // Channel closed successfully.
 	}
 	if (withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnB) || (!withdrawerIdx && chanInfoAfterWithdrawn.Control.WithdrawnA) {
 		return nil
